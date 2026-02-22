@@ -1,0 +1,150 @@
+/* zone invisible a gauche pour detecter le hover */
+#mainMenuContainer{
+  position: fixed;
+  top: 50px;
+  left: 0;
+  height: calc(100vh - 50px);
+
+  width: 12px;        /* juste la zone de hover */
+  z-index: 2000;
+  overflow: visible;
+}
+
+/* la sidebar cachée qui slide au survol */
+.mainMenu{
+  position: absolute; /* au lieu de sticky */
+  top: 0;
+  left: 0;
+  height: 100%;
+
+  width: 240px;                 /* largeur quand c'est ouvert */
+  transform: translateX(-100%);/* cachée sauf la petite zone */
+  transition: transform .25s ease;
+
+  background-color: var(--discret-pink);
+  display: block;
+  padding: 3px;
+  border-right: 2px solid var(--emalca-blue-dark);
+}
+
+#mainMenuContainer:hover .mainMenuItemCollapsable{
+  max-width: 220px;
+  opacity: 1;
+}
+
+/* ça s'ouvre quand on passe la souris */
+#mainMenuContainer:hover .mainMenu{
+  transform: translateX(0);
+}
+
+.mainMenuItemCollapsable{
+  display:inline-block;
+  max-width:0;
+  opacity:0;
+  overflow:hidden;
+  white-space:nowrap;
+  transition:max-width .25s ease, opacity .2s ease;
+}
+
+div.mainMenuItem
+{
+	margin: 8px 3px;
+	padding: 9px;
+}
+div.mainMenuItem img, div.mainMenuItemSelected img
+{
+	height: 32px;
+	vertical-align: middle;
+}
+div.mainMenuItem *
+{
+	text-decoration: none;
+	/*color: var(--discret-sand);*/
+    color: black;
+}
+div.mainMenuItem:hover, div.mainMenuItemSelected:hover
+{
+	background-color: var(--hover-pink);
+	border-radius: 10px;
+}
+div.mainMenuItem:hover *, div.mainMenuItemSelected:hover *, span.contexteMenuItem:hover *, span.contexteMenuItemSelected:hover *
+{
+	color: var(--lighted-text-white);
+}
+div.mainMenuItemSelected
+{
+	margin: 8px 3px;
+	padding: 9px;
+	background-color: var(--btn-text);
+	border-radius: 10px;
+}
+
+div.mainMenuItemSelected *
+{
+	color: var(--emalca-blue-dark);
+	text-decoration: none;
+}
+
+main{ grid-area: section; }
+footer{ grid-area: footer; }
+
+/* ancien titre plus utilisé
+{
+	padding-left: 5px;
+	width: 100%;
+	border-bottom: 2px solid var(--emalca-blue-dark);
+	letter-spacing: 1px;
+	font-size: 1.3rem;
+}
+div.contexteMenu
+{
+	display: flex;
+	flex-wrap: wrap;
+}
+div.contexteMenu *
+{
+	text-decoration: none;
+	font-size: 0.8rem;
+}*/
+
+
+/* ancien visuel du menu contextuel, gardé au cas ou
+		span.contexteMenuItem
+		{
+			padding: 5px;
+			margin: 5px;
+			border-radius: 5px;
+			background-color: var(--emalca-blue-dark);
+			color: var(--discret-sand);
+		}
+		span.contexteMenuItemSelected
+		{
+			padding: 5px;
+			margin: 5px;
+			background-color: var(--selected-item-orange);
+			border-radius: 5px;
+		}
+		span.contexteMenuItemSelected a
+		{
+			color: var(--emalca-blue-dark);
+		}
+		span.contexteMenuItem a
+		{
+			color: var(--discret-sand);
+		}
+		span.contexteMenuItem:hover, span.contexteMenuItemSelected:hover
+		{
+			background-color: var(--hover-pink);
+			border-radius: 5px;
+		}*/
+/* fin ancien visuel */
+
+
+.contexteMenuItem img, .contexteMenuItemSelected img
+{
+	margin: 2px;
+	height: 20px;
+	vertical-align: middle;
+}
+
+

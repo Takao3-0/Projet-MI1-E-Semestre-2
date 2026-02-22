@@ -1,0 +1,117 @@
+.mainMenu
+{
+	position: fixed;
+	top: 0px;
+	left: 0px;
+	height: 100%;
+	background-color: var(--emalca-blue-dark);
+	display: block;
+	padding: 3px;
+	border-right: 2px solid var(--emalca-blue-dark);
+}
+#mainMenuContainer:has(*:focus) .mainMenuItemCollapsable {
+	/* affiche les elements cachés du menu quand on focus */
+	display: inline-block;
+	transition: width 3s ease-in-out; /* j'ai essayé mais ça marche pas lol */
+}
+.mainMenuItemCollapsable
+{
+	/* les trucs du menu qu'on cache par defaut */
+	padding-left: 5px;
+	display: none;
+}
+
+div.mainMenuItem
+{
+	margin: 8px 3px;
+	padding: 9px;
+}
+div.mainMenuItem img, div.mainMenuItemSelected img
+{
+	height: 32px;
+	vertical-align: middle;
+}
+div.mainMenuItem *
+{
+	text-decoration: none;
+	color: var(--discret-sand);
+}
+div.mainMenuItem:hover, div.mainMenuItemSelected:hover
+{
+	background-color: var(--hover-pink);
+	border-radius: 10px;
+}
+div.mainMenuItem:hover *, div.mainMenuItemSelected:hover *, span.contexteMenuItem:hover *, span.contexteMenuItemSelected:hover *
+{
+	color: var(--lighted-text-white);
+}
+div.mainMenuItemSelected
+{
+	margin: 8px 3px;
+	padding: 9px;
+	background-color: var(--selected-item-orange);
+	border-radius: 10px;
+}
+div.mainMenuItemSelected *
+{
+	color: var(--emalca-blue-dark);
+	text-decoration: none;
+}
+.divCentrale
+{
+	margin-top: -10px;
+	margin-left: 60px;
+	padding: 3px 0px 3px 0px;
+}
+.divTitre
+{
+	padding-left: 5px;
+	width: 100%;
+	border-bottom: 2px solid var(--emalca-blue-dark);
+	letter-spacing: 1px;
+	font-size: 1.3rem;
+}
+div.contexteMenu
+{
+	display: flex;
+	flex-wrap: wrap;
+}
+div.contexteMenu *
+{
+	text-decoration: none;
+	font-size: 0.8rem;
+}
+span.contexteMenuItem
+{
+	padding: 5px;
+	margin: 5px;
+	border-radius: 5px;
+	background-color: var(--emalca-blue-dark);
+	color: var(--discret-sand);
+}
+span.contexteMenuItemSelected
+{
+	padding: 5px;
+	margin: 5px;
+	background-color: var(--selected-item-orange);
+	border-radius: 5px;
+}
+span.contexteMenuItemSelected a
+{
+	color: var(--emalca-blue-dark);
+}
+span.contexteMenuItem a
+{
+	color: var(--discret-sand);
+}
+span.contexteMenuItem:hover, span.contexteMenuItemSelected:hover
+{
+	background-color: var(--hover-pink);
+	border-radius: 5px;
+}
+.contexteMenuItem img, .contexteMenuItemSelected img
+{
+	margin: 2px;
+	height: 20px;
+	vertical-align: middle;
+}
