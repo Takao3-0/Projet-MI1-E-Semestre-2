@@ -212,7 +212,7 @@
             <a href="#burgers">Burgers</a>
             <a href="#pizzas">Pizzas</a>
             <a href="#wraps">Wraps &amp; Tacos</a>
-            <a href="#sides">Sides</a>
+            <a href="#sides">Accompagnements</a>
             <a href="#desserts">Desserts</a>
             <a href="#boissons">Boissons</a>
         </nav>
@@ -291,7 +291,7 @@
                         <span class="menu-emoji">&#127839;</span>
                     </div>
                     <div class="menu-card-body">
-                        <span class="menu-cat">Side</span>
+                        <span class="menu-cat">Accompagnements</span>
                         <h3>Nuggets x8</h3>
                         <p>Croustillants avec sauce au choix</p>
                         <div class="menu-card-footer">
@@ -366,7 +366,7 @@
                         <span class="menu-emoji">&#127839;</span>
                     </div>
                     <div class="menu-card-body">
-                        <span class="menu-cat">Side</span>
+                        <span class="menu-cat">Accompagnements</span>
                         <h3>Frites Maison</h3>
                         <p>Fra&icirc;ches, sel de Gu&eacute;rande</p>
                         <div class="menu-card-footer">
