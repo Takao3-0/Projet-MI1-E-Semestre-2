@@ -58,12 +58,18 @@
           <li><a href="#features">Restaurant</a></li>
           <li><a href="#order">Commander</a></li>
           <li><a href="/ProjetCYJ/CYJ/Carte/">Carte</a></li>
-          <li><a href="/ProjetCYJ/CYJ/Livraison/">Livraison</a></li>
-          <li><a href="../CYF/">CYF</a></li>
-          <?php if ($est_connecte && $role_actuel === "admin"): ?>
+          <?php if ($est_connecte && ($role_actuel === "admin" || $role_actuel === "fakeadmin" || $role_actuel === "livreur")): ?>
+            <li><a href="/ProjetCYJ/CYJ/Livraison/">Livraison</a></li>
+          <?php endif; ?>
+          <?php if ($est_connecte && ($role_actuel === "admin" || $role_actuel === "fakeadmin" || $role_actuel === "colab.")): ?>
+            <li><a href="../CYF/">CYF</a></li>
+          <?php else: ?>
+            <li><a href="#Le lien ne fonctionne pas puisque vous n'êtes pas identifie">CYF</li>
+          <?php endif; ?>  
+          <?php if ($est_connecte && ($role_actuel === "admin" || $role_actuel === "fakeadmin")): ?>
             <li><a href="/ProjetCYJ/CYJ/Admin/">Admin</a></li>
           <?php endif; ?>
-          <?php if ($est_connecte && ($role_actuel === "admin" || $role_actuel === "chef")): ?>
+          <?php if ($est_connecte && ($role_actuel === "admin" || $role_actuel === "chef" || $role_actuel === "fakeadmin")): ?>
             <li><a href="/ProjetCYJ/CYJ/Cuisinier/">Cuisine</a></li>
           <?php endif; ?>
         </ul>
@@ -171,7 +177,7 @@
           </a>
         </div>
 
-        <?php if ($est_connecte && $role_actuel === "admin"): ?>
+        <?php if ($est_connecte && ($role_actuel === "admin" || $role_actuel === "fakeadmin")): ?>
           <div class="mainMenuItemLogin">
             <a href="/ProjetCYJ/CYJ/Admin/">
               <span class="mainMenuItemCollapsable">
@@ -194,7 +200,7 @@
         <?php endif; ?>
 
 
-        <?php if ($est_connecte && ($role_actuel === "admin" || $role_actuel === "chef")): ?>
+        <?php if ($est_connecte && ($role_actuel === "admin" || $role_actuel === "chef" || $role_actuel === "fakeadmin")): ?>
           <div class="mainMenuItemLogin">
             <a href="/ProjetCYJ/CYJ/Cuisinier/">
               <span class="mainMenuItemCollapsable">
@@ -340,7 +346,7 @@
           <span class="menu-emoji">&#127839;</span>
         </div>
         <div class="menu-card-body">
-          <span class="menu-cat">Side</span>
+          <span class="menu-cat">Accompagnements</span>
           <h3>Nuggets x8</h3>
           <p>Croustillants avec sauce au choix</p>
           <div class="menu-card-footer">
@@ -415,7 +421,7 @@
           <span class="menu-emoji">&#127839;</span>
         </div>
         <div class="menu-card-body">
-          <span class="menu-cat">Side</span>
+          <span class="menu-cat">Accompagnements</span>
           <h3>Frites Maison</h3>
           <p>Fra&icirc;ches, sel de Gu&eacute;rande</p>
           <div class="menu-card-footer">
