@@ -39,8 +39,7 @@ Développer une application web permettant :
 - Base de données MariaDB
 
 ## Accès (démo en ligne)
-Le projet se teste directement via le site (aucune installation locale nécessaire).
-https://alexandre-gourdon.fr
+Le projet se teste directement via le site https://alexandre-gourdon.fr.
 
 ### Comptes de test
 - **Cuisinier**
@@ -54,6 +53,9 @@ https://alexandre-gourdon.fr
 - **Livreur**
   - Identifiant : `Livreur`
   - Mot de passe : `MdpLivreur3`
+
+> **⚠️ Important :**
+> La fonctionnalité additionnelle déjà disponible n'est accessible uniquement que pour certaines sessions.
 
 ## Auteurs
 - Alexandre Gourdon
