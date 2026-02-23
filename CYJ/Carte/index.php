@@ -53,9 +53,10 @@
             <ul class="navbar-links">
             <li><a href="#menu">Populaires</a></li>
             <li><a href="/ProjetCYJ/CYJ/">Restaurant</a></li>
-            <li><a href="#order">Commander</a></li>
             <li><a href="/ProjetCYJ/CYJ/Carte/">Carte</a></li>
-            <li><a href="/ProjetCYJ/CYJ/Livraison/">Livraison</a></li>
+            <?php if ($est_connecte && ($role_actuel === "admin" || $role_actuel === "livreur")): ?>
+                <li><a href="/ProjetCYJ/CYJ/Livraison/">Livraison</a></li>
+            <?php endif; ?>
             <li><a href="/ProjetCYJ/CYF">CYF</a></li>
             <?php if ($est_connecte && $role_actuel === "admin"): ?>
                 <li><a href="/ProjetCYJ/CYJ/Admin/">Admin</a></li>
@@ -97,22 +98,6 @@
                 <a href="#" class="navbar-logo">
                     <span class="logo-cy">CY</span><span class="logo-rest"> RESTAURANT</span>
                 </a>
-
-                <div class="navbar-auth">
-                    <?php if ($est_connecte): ?>
-                        <span class="nav-user">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
-                                fill="currentColor">
-                                <path
-                                    d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" />
-                            </svg>
-                            <?php echo htmlspecialchars($nom_affiche); ?>
-                        </span>
-                    <?php else: ?>
-                        <a href="/ProjetCYJ/CYJ/LOG/login" class="btn-nav">Connexion</a>
-                        <a href="/ProjetCYJ/CYJ/LOG/signup" class="btn-nav btn-nav-primary">S'inscrire</a>
-                    <?php endif; ?>
-                </div>
             </div>
         </nav>
     </div>

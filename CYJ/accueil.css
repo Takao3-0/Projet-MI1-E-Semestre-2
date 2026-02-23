@@ -411,6 +411,7 @@ img { max-width: 100%; display: block; }
     box-shadow: var(--shadow);
     display: flex;
     flex-direction: column;
+    min-width: 0;
 }
 
 .menu-card:hover {
