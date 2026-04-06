@@ -1,0 +1,210 @@
+.livraison-page {
+    margin: 0;
+    padding: 0;
+    max-width: none;
+    width: 100%;
+    box-sizing: border-box;
+    font-family: "Segoe UI", system-ui, sans-serif;
+    color: #0f1821;
+    background: #f5f5f5;
+    min-height: 100vh;
+}
+
+/* Barre de navigation : pleine largeur (fond sur tout l’écran) */
+.livraison-page .mobilenavbar,
+.livraison-page .mobilenavbar .navbar {
+    width: 100%;
+    max-width: none;
+}
+
+.livraison-page #mainMenuContainer {
+    width: 100%;
+    max-width: none;
+}
+
+/* Contenu de la barre (logo, liens) sur toute la largeur utile */
+.livraison-page .navbar-inner {
+    max-width: none;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Contenu livraison : largeur max comme avant */
+.livraison-main {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 clamp(1rem, 4vw, 2rem) 2.5rem;
+    box-sizing: border-box;
+}
+
+/* Plusieurs livraisons : grille sur grand écran */
+.livraison-list {
+    display: grid;
+    gap: 1.25rem;
+    grid-template-columns: 1fr;
+}
+
+@media (min-width: 768px) {
+    .livraison-list {
+        grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr));
+    }
+}
+
+.livraison-top {
+    padding: 1.5rem 0 1.25rem;
+    border-bottom: 2px solid #ff7d29;
+    margin-bottom: 1.5rem;
+}
+
+.livraison-back {
+    display: inline-block;
+    margin-bottom: 0.75rem;
+    color: #555;
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.livraison-back:hover {
+    color: #ff7d29;
+}
+
+.livraison-top h1 {
+    margin: 0 0 0.35rem;
+    font-size: 1.5rem;
+    font-weight: 800;
+}
+
+.livraison-sub {
+    margin: 0;
+    color: #555;
+    font-size: 0.9rem;
+}
+
+.livraison-empty {
+    background: #fff;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e0e0e0;
+}
+
+.livraison-empty-hint {
+    margin-top: 0.75rem;
+    font-size: 0.85rem;
+    color: #666;
+}
+
+.livraison-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 1.25rem 1.35rem;
+    margin-bottom: 1.25rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e0e0e0;
+}
+
+.livraison-card-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid #eee;
+}
+
+.livraison-num {
+    margin: 0;
+    font-size: 1.15rem;
+    font-weight: 800;
+}
+
+.livraison-statut {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 0.35rem 0.75rem;
+    border-radius: 999px;
+    background: rgba(255, 125, 41, 0.15);
+    color: #e06520;
+}
+
+.livraison-client p {
+    margin: 0.35rem 0;
+    font-size: 0.92rem;
+    line-height: 1.45;
+}
+
+.livraison-confirm-form {
+    margin-top: 1.25rem;
+    padding-top: 1rem;
+    border-top: 1px solid #eee;
+}
+
+.livraison-card-footer {
+    margin-top: 1.15rem;
+    padding-top: 1rem;
+    border-top: 1px solid #eee;
+}
+
+.btn-confirm-livraison {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.85rem 1.25rem;
+    font-size: 1rem;
+    font-weight: 800;
+    font-family: inherit;
+    color: #fff;
+    text-align: center;
+    text-decoration: none;
+    background: linear-gradient(145deg, #ff8a3d 0%, #ff7d29 45%, #e86818 100%);
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(255, 125, 41, 0.35);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+}
+
+a.btn-confirm-livraison,
+a.btn-confirm-livraison:visited {
+    color: #fff;
+}
+
+.btn-confirm-livraison:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(255, 125, 41, 0.45);
+    filter: brightness(1.03);
+}
+
+.btn-confirm-livraison:active {
+    transform: translateY(0);
+    filter: brightness(0.98);
+}
+
+.btn-confirm-livraison:focus-visible {
+    outline: 2px solid #ff7d29;
+    outline-offset: 3px;
+}
+
+/* Lien « voir le détail » : libellé + flèche */
+.btn-livraison-detail-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.btn-livraison-detail-arrow {
+    display: inline-flex;
+    font-size: 1.15em;
+    line-height: 1;
+    transition: transform 0.2s ease;
+}
+
+.btn-livraison-detail-link:hover .btn-livraison-detail-arrow {
+    transform: translateX(4px);
+}
