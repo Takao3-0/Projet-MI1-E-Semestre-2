@@ -1,0 +1,183 @@
+/* Page détail livraison — complète ../livraison.css, sans JS */
+
+.livraison-detail .livraison-top {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+        "back back"
+        "title badge";
+    gap: 0.5rem 1rem;
+    align-items: center;
+}
+
+.livraison-detail .livraison-back {
+    grid-area: back;
+    margin-bottom: 0;
+}
+
+.livraison-detail .livraison-top h1 {
+    grid-area: title;
+    margin: 0;
+    font-size: clamp(1.35rem, 4vw, 1.75rem);
+}
+
+.livraison-detail .livraison-top .livraison-statut {
+    grid-area: badge;
+    justify-self: end;
+}
+
+.livraison-detail .livraison-card {
+    max-width: 42rem;
+    margin-left: 0;
+    margin-right: auto;
+    border-left: 4px solid #ff7d29;
+    padding: 1.5rem 1.5rem 1.35rem;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.07);
+}
+
+.livraison-detail-body {
+    display: flex;
+    flex-direction: column;
+    gap: 1.35rem;
+}
+
+.livraison-detail-section__title {
+    margin: 0 0 0.65rem;
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #e06520;
+}
+
+.livraison-detail-lines p {
+    margin: 0.4rem 0;
+    font-size: 0.98rem;
+    line-height: 1.5;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem 0.65rem;
+    align-items: baseline;
+}
+
+.livraison-detail-lines p strong {
+    flex: 0 0 7.5rem;
+    color: #3d4a56;
+    font-weight: 700;
+}
+
+.livraison-detail-lines p span {
+    color: #0f1821;
+    min-width: 0;
+    word-break: break-word;
+}
+
+.livraison-detail-lines--address .livraison-detail-address-line {
+    display: block;
+    margin: 0.25rem 0;
+    font-size: 1rem;
+    line-height: 1.45;
+    color: #0f1821;
+}
+
+.livraison-detail-empty {
+    margin: 0;
+    font-size: 0.92rem;
+    color: #666;
+    font-style: italic;
+}
+
+.livraison-detail-items {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border: 1px solid #eee;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #fafafa;
+}
+
+.livraison-detail-item {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 0.35rem 1rem;
+    padding: 0.55rem 0.85rem;
+    border-bottom: 1px solid #eee;
+    font-size: 0.92rem;
+}
+
+.livraison-detail-item:last-child {
+    border-bottom: none;
+}
+
+.livraison-detail-item__name {
+    font-weight: 600;
+    color: #0f1821;
+    flex: 1;
+    min-width: 0;
+}
+
+.livraison-detail-item__meta {
+    font-size: 0.85rem;
+    color: #555;
+    white-space: nowrap;
+}
+
+.livraison-detail-item__price {
+    margin-left: 0.35rem;
+    color: #777;
+    font-variant-numeric: tabular-nums;
+}
+
+.livraison-detail-total {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 2px solid #ff7d29;
+}
+
+.livraison-detail-total__label {
+    font-size: 1rem;
+    font-weight: 800;
+    color: #0f1821;
+}
+
+.livraison-detail-total__value {
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: #e06520;
+    font-variant-numeric: tabular-nums;
+}
+
+.livraison-detail .livraison-confirm-form {
+    margin-top: 1.5rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid #eee;
+}
+
+@media (max-width: 480px) {
+    .livraison-detail .livraison-top {
+        grid-template-columns: 1fr;
+        grid-template-areas:
+            "back"
+            "title"
+            "badge";
+    }
+
+    .livraison-detail .livraison-top .livraison-statut {
+        justify-self: start;
+    }
+
+    .livraison-detail-lines p {
+        flex-direction: column;
+        gap: 0.15rem;
+    }
+
+    .livraison-detail-lines p strong {
+        flex: none;
+    }
+}
