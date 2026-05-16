@@ -107,23 +107,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <form action="index.php" method="POST">
                     
                     <div class="form-group floating-group">
-                        <input type="text" name="username" id="username" required class="input-field" placeholder=" " autocomplete="username">
+                        <input type="text" name="username" id="username" required class="input-field" placeholder=" " autocomplete="username" maxlength="30">
                         <label for="username" class="floating-label">Nom d'utilisateur</label>
                     </div>
 
                     <div class="form-group floating-group">
-                        <input type="email" name="email" id="email" required class="input-field" placeholder=" " autocomplete="email">
+                        <input type="email" name="email" id="email" required class="input-field" placeholder=" " autocomplete="email" maxlength="100">
                         <label for="email" class="floating-label">Adresse e-mail</label>
                     </div>
 
                     <div class="form-group floating-group">
-                        <input type="password" name="password" id="password" required class="input-field" placeholder=" ">
+                        <input type="password" name="password" id="password" required class="input-field" placeholder=" " maxlength="64">
                         <label for="password" class="floating-label">Mot de passe</label>
                         <button type="button" class="toggle-password" onclick="togglePass('password')">Afficher</button>
                     </div>
 
                     <div class="form-group floating-group">
-                        <input type="password" name="confirmpassword" id="confirmpassword" required class="input-field" placeholder=" ">
+                        <input type="password" name="confirmpassword" id="confirmpassword" required class="input-field" placeholder=" " maxlength="64">
                         <label for="confirmpassword" class="floating-label">Confirmation du mot de passe</label>
                         <button type="button" class="toggle-password" onclick="togglePass('confirmpassword')">Afficher</button>
                     </div>
@@ -204,16 +204,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <script>
         const signupForm = document.querySelector('form');
-        const usernameInput = document.getElementById('username'); 
         const emailInput = document.getElementById('email');
-        const counterDisplay = document.getElementById('username-counter');
-
-        if (usernameInput && counterDisplay) {
-            usernameInput.addEventListener('input', function() {
-                const length = this.value.length;
-                counterDisplay.textContent = `${length} / 20 caractères`;
-            });
-        }
 
         signupForm.addEventListener('submit', function(e) {
             const pass = document.getElementById('password').value;
@@ -226,7 +217,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 alert("Veuillez vérifier l'email ou la correspondance des mots de passe.");
             }
         });
+
+        // Script pour le compteur de caractères
+        document.addEventListener('DOMContentLoaded', () => {
+            const inputsWithMaxlength = document.querySelectorAll('input[maxlength], textarea[maxlength]');
+            
+            inputsWithMaxlength.forEach(input => {
+                const maxLength = input.getAttribute('maxlength');
+                
+                const counter = document.createElement('div');
+                counter.className = 'char-counter';
+                counter.style.fontSize = '12px';
+                counter.style.color = '#888';
+                counter.style.textAlign = 'right';
+                counter.style.marginTop = '4px';
+                
+                const group = input.closest('.form-group') || input.parentElement;
+                group.appendChild(counter);
+                
+                const updateCounter = () => {
+                    const currentLength = input.value.length;
+                    const remaining = maxLength - currentLength;
+                    counter.textContent = `${currentLength}/${maxLength} (restants: ${remaining})`;
+                    if (currentLength >= maxLength) {
+                        counter.style.color = '#ff4b2b';
+                    } else {
+                        counter.style.color = '#888';
+                    }
+                };
+                
+                input.addEventListener('input', updateCounter);
+                updateCounter();
+            });
+        });
     </script>
 
 </body>
-</html>zd
+</html>

@@ -1,3 +1,4 @@
+<?php $BASE = preg_replace('#(/(?:Admin|Carte|Cuisinier|LOG|Livraison|Notation|Profil|Sujet|CYBank)(?:/.*)?)?/[^/]*$#', '', $_SERVER['SCRIPT_NAME']); ?>
 <?php require_once '../../../protection.php'; 
     $pdo_users = $pdo;
     require_once '../../../../db_config_yumland.php';
@@ -52,7 +53,7 @@
 
   <header class="prof-header">
     <div class="prof-header-left">
-      <a href="/ProjetCYJ/CYJ/" class="prof-back">&larr;</a>
+      <a href="<?= $BASE ?>/" class="prof-back">&larr;</a>
       <h1 class="prof-title">Mon Profil</h1>
     </div>
     <div class="prof-header-right">
@@ -76,8 +77,8 @@
         </div>
         <p>Vous devez &ecirc;tre connect&eacute; pour acc&eacute;der &agrave; votre profil.</p>
         <div class="prof-card-actions">
-          <a href="/ProjetCYJ/CYJ/LOG/login" class="prof-btn prof-btn-primary">Se connecter</a>
-          <a href="/ProjetCYJ/CYJ/LOG/signup" class="prof-btn prof-btn-secondary">S'inscrire</a>
+          <a href="<?= $BASE ?>/LOG/login" class="prof-btn prof-btn-primary">Se connecter</a>
+          <a href="<?= $BASE ?>/LOG/signup" class="prof-btn prof-btn-secondary">S'inscrire</a>
         </div>
       </div>
     </main>
@@ -142,7 +143,7 @@
         </div>
         <div class="prof-cards-grid">
 
-          <a href="/ProjetCYJ/CYJ/" class="prof-card prof-card-link">
+          <a href="<?= $BASE ?>/" class="prof-card prof-card-link">
             <div class="prof-card-icon">&#127968;</div>
             <div>
               <div class="prof-card-label">Accueil</div>
@@ -151,7 +152,7 @@
           </a>
 
           <?php if ($role_actuel === "chef" || $role_actuel === "admin"): ?>
-            <a href="/ProjetCYJ/CYJ/Cuisinier/" class="prof-card prof-card-link">
+            <a href="<?= $BASE ?>/Cuisinier/" class="prof-card prof-card-link">
               <div class="prof-card-icon">&#127859;</div>
               <div>
                 <div class="prof-card-label">Cuisine</div>
@@ -213,7 +214,7 @@
             <div class="prof-card-label">Commande en cours</div>
             <div class="prof-card-desc">Voir ma commande</div>
             </div></a>
-           <a href="/ProjetCYJ/CYJ/Notation" style="text-decoration:none;"><div class="prof-card prof-card-commande">
+           <a href="<?= $BASE ?>/Notation" style="text-decoration:none;"><div class="prof-card prof-card-commande">
             <div class="prof-card-label">Notation</div>
             <div class="prof-card-desc">Noter ma commande</div>
             </div></a> 

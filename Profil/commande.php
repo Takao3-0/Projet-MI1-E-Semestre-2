@@ -1,3 +1,4 @@
+<?php $BASE = preg_replace('#(/(?:Admin|Carte|Cuisinier|LOG|Livraison|Notation|Profil|Sujet|CYBank)(?:/.*)?)?/[^/]*$#', '', $_SERVER['SCRIPT_NAME']); ?>
 <?php require_once '../../../protection.php'; 
     $pdo_users = $pdo;
     require_once '../../../../db_config_yumland.php';
@@ -25,7 +26,7 @@ $commandes_en_cours = $stmt->fetchAll();
 
     <header class="prof-header">
         <div class="prof-header-left">
-            <a href="/ProjetCYJ/CYJ/Profil/" class="prof-back">&larr;</a>
+            <a href="<?= $BASE ?>/Profil/" class="prof-back">&larr;</a>
             <h1 class="prof-title">Suivi Commandes</h1>
         </div>
         <div class="prof-header-right">
@@ -49,8 +50,8 @@ $commandes_en_cours = $stmt->fetchAll();
         </div>
         <p>Vous devez &ecirc;tre connect&eacute; pour acc&eacute;der &agrave; vos commandes.</p>
         <div class="prof-card-actions">
-          <a href="/ProjetCYJ/CYJ/LOG/login" class="prof-btn prof-btn-primary">Se connecter</a>
-          <a href="/ProjetCYJ/CYJ/LOG/signup" class="prof-btn prof-btn-secondary">S'inscrire</a>
+          <a href="<?= $BASE ?>/LOG/login" class="prof-btn prof-btn-primary">Se connecter</a>
+          <a href="<?= $BASE ?>/LOG/signup" class="prof-btn prof-btn-secondary">S'inscrire</a>
         </div>
       </div>
 

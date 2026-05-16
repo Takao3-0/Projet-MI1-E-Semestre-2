@@ -1,4 +1,5 @@
 <?php 
+$BASE = preg_replace('#(/(?:Admin|Carte|Cuisinier|LOG|Livraison|Notation|Profil|Sujet|CYBank)(?:/.*)?)?/[^/]*$#', '', $_SERVER['SCRIPT_NAME']);
   require_once '../../../protection.php';
   require_once '../../../../db_config_yumland.php';
   $pdo_commandes = $pdo;
@@ -479,7 +480,7 @@
 
   <header class="cook-header">
     <div class="cook-header-left">
-      <a href="/ProjetCYJ/CYJ/" class="cook-back">&larr;</a>
+      <a href="<?= $BASE ?>/" class="cook-back">&larr;</a>
       <h1 class="cook-title">Cuisine</h1>
     </div>
     <div class="cook-header-right">

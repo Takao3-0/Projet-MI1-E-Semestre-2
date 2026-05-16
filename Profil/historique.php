@@ -1,4 +1,5 @@
 <?php 
+$BASE = preg_replace('#(/(?:Admin|Carte|Cuisinier|LOG|Livraison|Notation|Profil|Sujet|CYBank)(?:/.*)?)?/[^/]*$#', '', $_SERVER['SCRIPT_NAME']);
   require_once '../../../protection.php'; 
   //pour tester
   $pdo_users = $pdo;
@@ -146,7 +147,7 @@
 
   <header class="prof-header">
     <div class="prof-header-left">
-      <a href="/ProjetCYJ/CYJ/Profil/" class="prof-back">&larr;</a>
+      <a href="<?= $BASE ?>/Profil/" class="prof-back">&larr;</a>
       <h1 class="prof-title">Mon Profil</h1>
     </div>
     <div class="prof-header-right">
@@ -170,8 +171,8 @@
         </div>
         <p>Vous devez &ecirc;tre connect&eacute; pour acc&eacute;der &agrave; votre historique.</p>
         <div class="prof-card-actions">
-          <a href="/ProjetCYJ/CYJ/LOG/login" class="prof-btn prof-btn-primary">Se connecter</a>
-          <a href="/ProjetCYJ/CYJ/LOG/signup" class="prof-btn prof-btn-secondary">S'inscrire</a>
+          <a href="<?= $BASE ?>/LOG/login" class="prof-btn prof-btn-primary">Se connecter</a>
+          <a href="<?= $BASE ?>/LOG/signup" class="prof-btn prof-btn-secondary">S'inscrire</a>
         </div>
       </div>
     </main>

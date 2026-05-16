@@ -1,4 +1,5 @@
 <?php
+$BASE = preg_replace('#(/(?:Admin|Carte|Cuisinier|LOG|Livraison|Notation|Profil|Sujet|CYBank)(?:/.*)?)?/[^/]*$#', '', $_SERVER['SCRIPT_NAME']);
 require_once '../../../../protection.php';
 $pdo_etudiant = $pdo;
 require_once '../../../../../db_config_yumland.php';
@@ -110,7 +111,7 @@ if ($est_connecte && $role_actuel === 'livreur') {
     $full_address_js = json_encode($full_address);
 
 } else {
-    header('Location: /ProjetCYJ/CYJ/index.php');
+    header('Location: ' . \$BASE . '/index.php');
     exit;
 }
 ?>

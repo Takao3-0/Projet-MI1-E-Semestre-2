@@ -1,12 +1,51 @@
 <?php 
-require_once '../../../protection.php'; 
+$BASE = preg_replace('#(/(?:Admin|Carte|Cuisinier|LOG|Livraison|Notation|Profil|Sujet|CYBank)(?:/.*)?)?/[^/]*$#', '', $_SERVER['SCRIPT_NAME']);
+$path_prot = file_exists('../../protection.php') ? '../../protection.php' : (file_exists('../../../protection.php') ? '../../../protection.php' : '../../../../protection.php');
+require_once $path_prot;
 $pdo_users = $pdo; 
-require_once '../../../../db_config_yumland.php';
+$path_db = file_exists('../../../db_config_yumland.php') ? '../../../db_config_yumland.php' : '../../../../db_config_yumland.php';
+require_once $path_db;
 $pdo_commandes = $pdo; 
+
+try { $pdo_commandes->exec("ALTER TABLE avis_clients ADD COLUMN id_commande INT DEFAULT NULL"); } catch (Exception $e) {}
 
 $stmt = $pdo_users->prepare("SELECT * FROM users WHERE username = ?");
 $stmt->execute([$user_actuel['username']]);
 $infos_completas_user = $stmt->fetch();
+
+$id_commande = isset($_GET['id']) ? (int) $_GET['id'] : 0;
+if ($id_commande <= 0) {
+    $stmt = $pdo_commandes->prepare("
+        SELECT id FROM commandes 
+        WHERE email = ? AND statut_production = 'Livré' 
+        AND id NOT IN (SELECT id_commande FROM avis_clients WHERE id_commande IS NOT NULL)
+        ORDER BY date_commande DESC LIMIT 1
+    ");
+    $stmt->execute([$infos_completas_user['email']]);
+    $latest = $stmt->fetch();
+    if ($latest) {
+        $id_commande = $latest['id'];
+    } else {
+        die("<div style='text-align:center; margin-top:50px; font-family:sans-serif; color:white; background:#111; padding:50px; min-height:100vh;'><h2>Aucune commande récente à noter.</h2><a href='../Profil/historique.php' style='color:#f97316;'>Retour à l\'historique</a></div>");
+    }
+} else {
+    $stmt = $pdo_commandes->prepare("SELECT statut_production FROM commandes WHERE id = ? AND email = ?");
+    $stmt->execute([$id_commande, $infos_completas_user['email']]);
+    $cmd = $stmt->fetch();
+
+    if (!$cmd) {
+        die("<div style='text-align:center; margin-top:50px; font-family:sans-serif; color:white; background:#111; padding:50px; min-height:100vh;'><h2>Commande introuvable ou vous n\'avez pas l\'autorisation.</h2></div>");
+    }
+    if ($cmd['statut_production'] !== 'Livré') {
+        die("<div style='text-align:center; margin-top:50px; font-family:sans-serif; color:white; background:#111; padding:50px; min-height:100vh;'><h2>La notation est possible uniquement après livraison.</h2><a href='../Profil/historique.php' style='color:#f97316;'>Retour à l\'historique</a></div>");
+    }
+
+    $stmt = $pdo_commandes->prepare("SELECT 1 FROM avis_clients WHERE id_commande = ?");
+    $stmt->execute([$id_commande]);
+    if ($stmt->fetch()) {
+        die("<div style='text-align:center; margin-top:50px; font-family:sans-serif; color:white; background:#111; padding:50px; min-height:100vh;'><h2>Vous avez déjà noté cette commande.</h2><a href='../Profil/historique.php' style='color:#f97316;'>Retour à l\'historique</a></div>");
+    }
+}
 
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -19,15 +58,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $nom_client  = $infos_completas_user['username'] ?? 'Anonyme';
         $mail_client = $infos_completas_user['email'] ?? 'anonyme@cy-restaurant.fr';
 
-        $sql = "INSERT INTO avis_clients (id_client, nom_client, mail_client, commentaire, note_livraison, note_qualite) 
-                VALUES (?, ?, ?, ?, ?, ?)";
+        $sql = "INSERT INTO avis_clients (id_client, nom_client, mail_client, commentaire, note_livraison, note_qualite, id_commande) 
+                VALUES (?, ?, ?, ?, ?, ?, ?)";
         
         $stmt = $pdo_commandes->prepare($sql);
         
-        if ($stmt->execute([$id_client, $nom_client, $mail_client, $commentaire, $note_livraison, $note_qualite])) {
+        if ($stmt->execute([$id_client, $nom_client, $mail_client, $commentaire, $note_livraison, $note_qualite, $id_commande])) {
             echo "<script>
                 alert('Avis enregistré avec succès !');
-                window.location.href = '/ProjetCYJ/CYJ/index.php';
+                window.location.href = '<?= $BASE ?>/index.php';
             </script>";
             exit();
         }
@@ -114,7 +153,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         </div>
                         <div>
                             <p class="text-xs text-gray-500 uppercase font-semibold">Commande</p>
-                            <p class="font-bold text-lg text-white">#CY-7742</p>
+                            <p class="font-bold text-lg text-white">#CY-<?= htmlspecialchars($id_commande) ?></p>
                         </div>
                     </div>
                     <div class="order-tag px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">

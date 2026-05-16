@@ -1,4 +1,5 @@
 <?php
+$BASE = preg_replace('#(/(?:Admin|Carte|Cuisinier|LOG|Livraison|Notation|Profil|Sujet|CYBank)(?:/.*)?)?/[^/]*$#', '', $_SERVER['SCRIPT_NAME']);
     require_once '../../../protection.php';
     $pdo_etudiant = $pdo;
     require_once '../../../../db_config_yumland.php';
@@ -12,7 +13,7 @@
     const LIVRAISON_SQL_UNASSIGNED = '(' . LIVREUR_ID_COL . ' IS NULL OR ' . LIVREUR_ID_COL . ' = 0)';
 
     if (!$est_connecte || $role_actuel !== 'livreur') {
-        header('Location: /ProjetCYJ/CYJ/index.php');
+        header('Location: ' . \$BASE . '/index.php');
         exit;
     }
 
@@ -133,7 +134,7 @@
 
     <main class="livraison-main">
     <header class="livraison-top">
-        <a href="/ProjetCYJ/CYJ/" class="livraison-back">&larr; Accueil</a>
+        <a href="<?= $BASE ?>/" class="livraison-back">&larr; Accueil</a>
         <h1>Livraison</h1>
         <p class="livraison-sub">En haut : commandes <strong>prêtes</strong> encore disponibles. En dessous : <strong>vos</strong> courses en cours uniquement.</p>
     </header>

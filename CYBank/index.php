@@ -1,4 +1,5 @@
 <?php 
+$BASE = preg_replace('#(/(?:Admin|Carte|Cuisinier|LOG|Livraison|Notation|Profil|Sujet|CYBank)(?:/.*)?)?/[^/]*$#', '', $_SERVER['SCRIPT_NAME']);
     require_once '../../../protection.php';
     $pdo_etudiant = $pdo;
     require_once __DIR__ . '/../../../../db_config_yumland.php';
@@ -55,7 +56,7 @@
         $API = getAPIKey($vendeur);
         $transaction = uniqid(); 
         $montant = number_format($panier_total, 2, '.', '');
-        $retour = "https://alexandre-gourdon.fr/ProjetCYJ/CYJ/CYBank/index.php";
+        $retour = "https://alexandre-gourdon.fr{$BASE}/CYBank/index.php";
         $control = md5($API . "#" . $transaction . "#" . $montant . "#" . $vendeur . "#" . $retour . "#");
 
         echo "<form action='https://www.plateforme-smc.fr/cybank/index.php' method='POST'>";
@@ -392,9 +393,9 @@
           <li><a href="#menu">Populaires</a></li>
           <li><a href="#features">Restaurant</a></li>
           <li><a href="#order">Commander</a></li>
-          <li><a href="/ProjetCYJ/CYJ/Carte/">Carte</a></li>
+          <li><a href="<?= $BASE ?>/Carte/">Carte</a></li>
           <?php if ($est_connecte && $role_actuel === "livreur"): ?>
-            <li><a href="/ProjetCYJ/CYJ/Livraison/">Livraison</a></li>
+            <li><a href="<?= $BASE ?>/Livraison/">Livraison</a></li>
           <?php endif; ?>
           <?php if ($est_connecte && ($role_actuel === "admin" || $role_actuel === "colab.")): ?>
             <li><a href="../CYF/">CYF</a></li>
@@ -402,16 +403,16 @@
             <li><a href="#Le lien ne fonctionne pas puisque vous n'êtes pas identifie">CYF</li>
           <?php endif; ?>  
           <?php if ($est_connecte && ($role_actuel === "admin" || $role_actuel === "fakeadmin")): ?>
-            <li><a href="/ProjetCYJ/CYJ/Admin/">Admin</a></li>
+            <li><a href="<?= $BASE ?>/Admin/">Admin</a></li>
           <?php endif; ?>
           <?php if ($est_connecte && ($role_actuel === "admin" || $role_actuel === "chef" || $role_actuel === "fakeadmin")): ?>
-            <li><a href="/ProjetCYJ/CYJ/Cuisinier/">Cuisine</a></li>
+            <li><a href="<?= $BASE ?>/Cuisinier/">Cuisine</a></li>
           <?php endif; ?>
         </ul>
 
         <div class="navbar-auth">
           <?php if ($est_connecte): ?>
-            <a href="/ProjetCYJ/CYJ/Profil/" style="text-decoration:none">
+            <a href="<?= $BASE ?>/Profil/" style="text-decoration:none">
               <span class="nav-user">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                   <path
@@ -425,8 +426,8 @@
               <button type="submit" class="btn-nav">D&eacute;connexion</button>
             </form>
           <?php else: ?>
-            <a href="/ProjetCYJ/CYJ/LOG/login" class="btn-nav">Connexion</a>
-            <a href="/ProjetCYJ/CYJ/LOG/signup" class="btn-nav btn-nav-primary">S'inscrire</a>
+            <a href="<?= $BASE ?>/LOG/login" class="btn-nav">Connexion</a>
+            <a href="<?= $BASE ?>/LOG/signup" class="btn-nav btn-nav-primary">S'inscrire</a>
           <?php endif; ?>
         </div>
       </div>
@@ -458,7 +459,7 @@
       <?php if (!($est_connecte)): ?>
         <nav id="menuNav">
           <div class="mainMenuItemLogin">
-            <a href="/ProjetCYJ/CYJ/LOG/login">
+            <a href="<?= $BASE ?>/LOG/login">
               <span class="mainMenuItemCollapsable">
                 <img src="../images/accueil.png" alt="Menu item">
               </span>
@@ -467,7 +468,7 @@
           </div>
 
           <div class="mainMenuItemSignIn">
-            <a href="/ProjetCYJ/CYJ/LOG/signup">
+            <a href="<?= $BASE ?>/LOG/signup">
               <span class="mainMenuItemCollapsable">
                 <img src="../images/rechercher.png" alt="Menu item">
               </span>
@@ -495,7 +496,7 @@
         </div>
 
         <div class="mainMenuItemLogin">
-          <a href="/ProjetCYJ/CYJ/Carte/">
+          <a href="<?= $BASE ?>/Carte/">
             <span class="mainMenuItemCollapsable">
               <img src="../images/accueil.png" alt="Menu item">
             </span>
@@ -505,7 +506,7 @@
 
         <?php if ($est_connecte && ($role_actuel === "admin" || $role_actuel === "fakeadmin")): ?>
           <div class="mainMenuItemLogin">
-            <a href="/ProjetCYJ/CYJ/Admin/">
+            <a href="<?= $BASE ?>/Admin/">
               <span class="mainMenuItemCollapsable">
                 <img src="../images/accueil.png" alt="Menu item">
               </span>
@@ -516,7 +517,7 @@
 
         <?php if ($est_connecte && $role_actuel === "livreur"): ?>
           <div class="mainMenuItemLogin">
-            <a href="/ProjetCYJ/CYJ/Livraison/">
+            <a href="<?= $BASE ?>/Livraison/">
               <span class="mainMenuItemCollapsable">
                 <img src="../images/accueil.png" alt="Menu item">
               </span>
@@ -528,7 +529,7 @@
 
         <?php if ($est_connecte && ($role_actuel === "admin" || $role_actuel === "chef" || $role_actuel === "fakeadmin")): ?>
           <div class="mainMenuItemLogin">
-            <a href="/ProjetCYJ/CYJ/Cuisinier/">
+            <a href="<?= $BASE ?>/Cuisinier/">
               <span class="mainMenuItemCollapsable">
                 <img src="../images/accueil.png" alt="Menu item">
               </span>
@@ -599,7 +600,7 @@
                     <?php if (empty($panier_items)): ?>
                         <div class="checkout-empty">
                             <p>Votre panier est vide.</p>
-                            <p><a href="/ProjetCYJ/CYJ/Carte/">Retour &agrave; la carte</a></p>
+                            <p><a href="<?= $BASE ?>/Carte/">Retour &agrave; la carte</a></p>
                         </div>
                     <?php else: ?>
                         <ul class="checkout-lines">
@@ -717,7 +718,7 @@
                                 <strong>Carte bancaire</strong>
                                 <small>Paiement sécurisé via CYBank</small>
                             </span>
-                            <img src="/ProjetCYJ/CYJ/CYBank/CYBANKlogo.png" alt="CYBank" class="payment-logo">
+                            <img src="<?= $BASE ?>/CYBank/CYBANKlogo.png" alt="CYBank" class="payment-logo">
                         </label>
                         <label class="checkout-option">
                             <input type="radio" name="paiement" value="2" id="paiement_paypal">
@@ -725,7 +726,7 @@
                                 <strong>PayPal</strong>
                                 <small>Règlement avec votre compte PayPal</small>
                             </span>
-                            <img src="/ProjetCYJ/CYJ/CYBank/PayPalpng.png" alt="PayPal" class="payment-logo">
+                            <img src="<?= $BASE ?>/CYBank/PayPalpng.png" alt="PayPal" class="payment-logo">
                         </label>
                         <label class="checkout-option">
                             <input type="radio" name="paiement" value="3" id="paiement_gpay">
@@ -733,7 +734,7 @@
                                 <strong>Google Pay</strong>
                                 <small>Paiement rapide sur appareil compatible</small>
                             </span>
-                            <img src="/ProjetCYJ/CYJ/CYBank/googlepaypng.png" alt="Google Pay" class="payment-logo">
+                            <img src="<?= $BASE ?>/CYBank/googlepaypng.png" alt="Google Pay" class="payment-logo">
                         </label>
                     </div>
                 </div>
@@ -765,14 +766,14 @@
                             🎮 CY Fighters
                         </a>
                         <?php if ($last_cid > 0): ?>
-                        <a class="checkout-waiting-game__btn checkout-waiting-game__btn--outline" href="/ProjetCYJ/CYJ/Profil/Detail.php?id=<?php echo $last_cid; ?>">
+                        <a class="checkout-waiting-game__btn checkout-waiting-game__btn--outline" href="<?= $BASE ?>/Profil/Detail.php?id=<?php echo $last_cid; ?>">
                             📦 Suivre ma commande
                         </a>
                         <?php endif; ?>
                     </div>
                 </div>
                 <?php endif; ?>
-                <a class="checkout-back" href="/ProjetCYJ/CYJ/Carte/">Retour &agrave; la carte</a>
+                <a class="checkout-back" href="<?= $BASE ?>/Carte/">Retour &agrave; la carte</a>
             </div>
         <?php endif; ?>
                 </div>

@@ -1,5 +1,6 @@
 <?php 
 
+$BASE = preg_replace('#(/(?:Admin|Carte|Cuisinier|LOG|Livraison|Notation|Profil|Sujet|CYBank)(?:/.*)?)?/[^/]*$#', '', $_SERVER['SCRIPT_NAME']);
     require_once '../../../protection.php';
 
     require_once '../../../../db_config_yumland.php';
@@ -182,7 +183,49 @@
             ];
         }
     }
+
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'ajax_filter') {
+        $regime = $_POST['regime'] ?? 'tous';
+        
+        if ($regime === 'tous') {
+            echo "reload";
+            exit;
+        }
+
+        $stmt_filter = $pdo->prepare("SELECT * FROM articles WHERE description LIKE ? OR nom LIKE ?");
+        $stmt_filter->execute(["%$regime%", "%$regime%"]);
+        $filtered_articles = $stmt_filter->fetchAll();
+
+        if (empty($filtered_articles)) {
+            echo '<p style="color:var(--orange); text-align:center; width:100%; font-weight:bold; padding:2rem;">Aucun article ne correspond à ce critère.</p>';
+        } else {
+            foreach ($filtered_articles as $article) {
+                $prix_clean = str_replace(',', '.', (string)$article['prix']);
+                echo '
+                <div class="menu-card" data-price="' . (float)$prix_clean . '" data-sales="' . ($article['code'] % 7) . '">
+                    <div class="menu-card-img" style="background: linear-gradient(135deg,#FFE0B2,#FFB74D)">
+                        <span class="menu-emoji">&#127828;</span>
+                    </div>
+                    <div class="menu-card-body">
+                        <span class="menu-cat">' . htmlspecialchars(ucfirst($article['type_post'])) . '</span>
+                        <h3>' . htmlspecialchars($article['nom']) . '</h3>
+                        <p>' . htmlspecialchars($article['description']) . '</p>
+                        <div class="menu-card-footer">
+                            <span class="menu-price">' . $article['prix'] . ' &euro;</span>
+                            <form method="POST" action="index.php">
+                                <button type="submit" name="add_' . htmlspecialchars($article['type_post']) . '" value="' . $article['code'] . '" class="menu-add">+</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>';
+            }
+        }
+        exit;
+    }
+
 ?>
+
+
 
 <!DOCTYPE html>
 <html lang="fr">
@@ -597,22 +640,22 @@
             </a>
 
             <ul class="navbar-links">
-            <li><a href="/ProjetCYJ/CYJ/">Restaurant</a></li>
+            <li><a href="<?= $BASE ?>/">Restaurant</a></li>
             <?php if ($est_connecte && $role_actuel === "livreur"): ?>
-                <li><a href="/ProjetCYJ/CYJ/Livraison/">Livraison</a></li>
+                <li><a href="<?= $BASE ?>/Livraison/">Livraison</a></li>
             <?php endif; ?>
             <li><a href="/ProjetCYJ/CYF">CYF</a></li>
             <?php if ($est_connecte && $role_actuel === "admin"): ?>
-                <li><a href="/ProjetCYJ/CYJ/Admin/">Admin</a></li>
+                <li><a href="<?= $BASE ?>/Admin/">Admin</a></li>
             <?php endif; ?>
             <?php if ($est_connecte && ($role_actuel === "admin" || $role_actuel === "chef")): ?>
-                <li><a href="/ProjetCYJ/CYJ/Cuisinier/">Cuisine</a></li>
+                <li><a href="<?= $BASE ?>/Cuisinier/">Cuisine</a></li>
             <?php endif; ?>
             </ul>
 
             <div class="navbar-auth">
             <?php if ($est_connecte): ?>
-                <a href="/ProjetCYJ/CYJ/Profil/" style="text-decoration:none">
+                <a href="<?= $BASE ?>/Profil/" style="text-decoration:none">
                 <span class="nav-user">
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                     <path
@@ -641,8 +684,8 @@
                     <?php endif; ?>
                 </span>
             <?php else: ?>
-                <a href="/ProjetCYJ/CYJ/LOG/login" class="btn-nav">Connexion</a>
-                <a href="/ProjetCYJ/CYJ/LOG/signup" class="btn-nav btn-nav-primary">S'inscrire</a>
+                <a href="<?= $BASE ?>/LOG/login" class="btn-nav">Connexion</a>
+                <a href="<?= $BASE ?>/LOG/signup" class="btn-nav btn-nav-primary">S'inscrire</a>
                 <button type="button" class="cart-icon-wrap" aria-label="Panier" aria-expanded="false">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 
@@ -705,7 +748,7 @@
       <?php if (!($est_connecte)): ?>
         <nav id="menuNav">
           <div class="mainMenuItemLogin">
-            <a href="/ProjetCYJ/CYJ/LOG/login">
+            <a href="<?= $BASE ?>/LOG/login">
               <span class="mainMenuItemCollapsable">
                 <img src="../images/accueil.png" alt="Menu item">
               </span>
@@ -714,7 +757,7 @@
           </div>
 
           <div class="mainMenuItemSignIn">
-            <a href="/ProjetCYJ/CYJ/LOG/signup">
+            <a href="<?= $BASE ?>/LOG/signup">
               <span class="mainMenuItemCollapsable">
                 <img src="../images/rechercher.png" alt="Menu item">
               </span>
@@ -724,7 +767,7 @@
         <?php endif; ?>
 
         <div class="mainMenuItemLogin">
-          <a href="/ProjetCYJ/CYJ/Carte/">
+          <a href="<?= $BASE ?>/Carte/">
             <span class="mainMenuItemCollapsable">
               <img src="../images/accueil.png" alt="Menu item">
             </span>
@@ -734,7 +777,7 @@
 
         <?php if ($est_connecte && $role_actuel === "admin"): ?>
           <div class="mainMenuItemLogin">
-            <a href="/ProjetCYJ/CYJ/Admin/">
+            <a href="<?= $BASE ?>/Admin/">
               <span class="mainMenuItemCollapsable">
                 <img src="../images/accueil.png" alt="Menu item">
               </span>
@@ -745,7 +788,7 @@
 
         <?php if ($est_connecte && $role_actuel === "livreur"): ?>
           <div class="mainMenuItemLogin">
-            <a href="/ProjetCYJ/CYJ/Livraison/">
+            <a href="<?= $BASE ?>/Livraison/">
               <span class="mainMenuItemCollapsable">
                 <img src="../images/accueil.png" alt="Menu item">
               </span>
@@ -757,7 +800,7 @@
 
         <?php if ($est_connecte && ($role_actuel === "admin" || $role_actuel === "chef")): ?>
           <div class="mainMenuItemLogin">
-            <a href="/ProjetCYJ/CYJ/Cuisinier/">
+            <a href="<?= $BASE ?>/Cuisinier/">
               <span class="mainMenuItemCollapsable">
                 <img src="../images/accueil.png" alt="Menu item">
               </span>
@@ -800,6 +843,30 @@
                 <a href="#boissons" class="sticky-nav-link">Boissons</a>
             </div>
         </nav>
+
+
+        <div class="catalog-controls" style="max-width: 1200px; margin: 20px auto; padding: 15px; background: #1e1e2f; border-radius: 12px; display: flex; gap: 20px; justify-content: center; align-items: center; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+    
+            <div style="display:flex; flex-direction:column; gap:5px;">
+                <label style="color:#aaa; font-size:0.75rem; font-weight:bold; letter-spacing:0.05em;">🌱 RÉGIME ALIMENTAIRE</label>
+                <select id="filter-regime" style="padding: 10px; background: #2a2a40; color: white; border: 1px solid #444; border-radius: 6px; font-weight:600; cursor:pointer;">
+                    <option value="tous">Tous les produits</option>
+                    <option value="poulet">Plats au Poulet</option>
+                    <option value="pepperoni">Plats Pepperoni</option>
+                    <option value="fromage">Plats au Fromage</option>
+                </select>
+            </div>
+
+            <div style="display:flex; flex-direction:column; gap:5px;">
+                <label style="color:#aaa; font-size:0.75rem; font-weight:bold; letter-spacing:0.05em;">📊 TRIER PAR</label>
+                <select id="catalog-sort" style="padding: 10px; background: #2a2a40; color: white; border: 1px solid #444; border-radius: 6px; font-weight:600; cursor:pointer;">
+                    <option value="defaut">Ordre par défaut</option>
+                    <option value="prix-croissant">Prix : Croissant</option>
+                    <option value="prix-decroissant">Prix : Décroissant</option>
+                    <option value="populaire">Les plus populaires</option>
+                </select>
+            </div>
+        </div>
 
         <!-- Pour le moment les populaires sont géré manuellement mais à terme sera géré via la database (articles les plus vendus) -->
         <section class="menu-section">
@@ -1023,7 +1090,7 @@
 
                 <?php foreach ($articles as $article): ?>
                     <?php if ($article['type_post'] == 'burger'): ?>
-                        <div class="menu-card">
+                        <div class="menu-card" data-price="<?php echo (float)str_replace(',', '.', $article['prix']); ?>" data-sales="<?php echo ($article['code'] % 7); ?>">
                             <div class="menu-card-img" style="background: linear-gradient(135deg,#FFE0B2,#FFB74D)">
                                 <span class="menu-emoji">&#127828;</span>
                             </div>
@@ -1051,7 +1118,7 @@
             <div class="menu-grid">
                 <?php foreach ($articles as $article): ?>
                     <?php if ($article['type_post'] == 'pizza'): ?>
-                        <div class="menu-card">
+                        <div class="menu-card" data-price="<?php echo (float)str_replace(',', '.', $article['prix']); ?>" data-sales="<?php echo ($article['code'] % 7); ?>">
                             <div class="menu-card-img" style="background: linear-gradient(135deg,#FCE4EC,#F48FB1)">
                                 <span class="menu-emoji">&#127829;</span>
                             </div>
@@ -1078,7 +1145,7 @@
             <div class="menu-grid">
                 <?php foreach ($articles as $article): ?>
                     <?php if ($article['type_post'] == 'wrap'): ?>
-                        <div class="menu-card">
+                        <div class="menu-card" data-price="<?php echo (float)str_replace(',', '.', $article['prix']); ?>" data-sales="<?php echo ($article['code'] % 7); ?>">
                             <div class="menu-card-img" style="background: linear-gradient(135deg,#E8F5E9,#A5D6A7)">
                                 <span class="menu-emoji">&#127790;</span>
                             </div>
@@ -1109,7 +1176,7 @@
             <div class="menu-grid">
                 <?php foreach ($articles as $article): ?>
                     <?php if ($article['type_post'] == 'side'): ?>
-                        <div class="menu-card">
+                        <div class="menu-card" data-price="<?php echo (float)str_replace(',', '.', $article['prix']); ?>" data-sales="<?php echo ($article['code'] % 7); ?>">
                             <div class="menu-card-img" style="background: linear-gradient(135deg,#FFF3E0,#FFCC80)">
                                 <span class="menu-emoji">&#127839;</span>
                             </div>
@@ -1136,7 +1203,7 @@
             <div class="menu-grid">
             <?php foreach ($articles as $article): ?>
                     <?php if ($article['type_post'] == 'dessert'): ?>
-                        <div class="menu-card">
+                        <div class="menu-card" data-price="<?php echo (float)str_replace(',', '.', $article['prix']); ?>" data-sales="<?php echo ($article['code'] % 7); ?>">
                             <div class="menu-card-img" style="background: linear-gradient(135deg,#FCE4EC,#F48FB1)">
                                 <span class="menu-emoji">&#127846;</span>
                             </div>
@@ -1163,7 +1230,7 @@
             <div class="menu-grid">
             <?php foreach ($articles as $article): ?>
                     <?php if ($article['type_post'] == 'boisson'): ?>
-                        <div class="menu-card">
+                        <div class="menu-card" data-price="<?php echo (float)str_replace(',', '.', $article['prix']); ?>" data-sales="<?php echo ($article['code'] % 7); ?>">
                             <div class="menu-card-img" style="background: linear-gradient(135deg,#E3F2FD,#90CAF9)">
                                 <span class="menu-emoji">&#129380;</span>
                             </div>
@@ -1195,14 +1262,14 @@
                 <p>Creative Yumland &mdash; CY Tech, Cergy</p>
             </div>
             <div class="footer-links">
-                <a href="/ProjetCYJ/CYJ/Carte/">La Carte</a>
+                <a href="<?= $BASE ?>/Carte/">La Carte</a>
                 <?php if ($est_connecte && $role_actuel === "livreur"): ?>
-                <a href="/ProjetCYJ/CYJ/Livraison/">Espace livreur</a>
+                <a href="<?= $BASE ?>/Livraison/">Espace livreur</a>
                 <?php endif; ?>
                 <?php if ($est_connecte): ?>
-                    <a href="/ProjetCYJ/CYJ/Profil">Mon compte</a>
+                    <a href="<?= $BASE ?>/Profil">Mon compte</a>
                 <?php else: ?>
-                    <a href="/ProjetCYJ/CYJ/LOG/login">Connexion</a>
+                    <a href="<?= $BASE ?>/LOG/login">Connexion</a>
                 <?php endif; ?>
                 <a href="/legal">Mentions l&eacute;gales</a>
             </div>
@@ -1256,7 +1323,7 @@
                             <button type="submit" name="cart_clear" value="1" class="btn-vider">Vider</button>
                         </form>
                         <!-- <button type="button" class="btn-commander">Commander</button> -->
-                        <a href="/ProjetCYJ/CYJ/CYBank/" class="btn-commander" style="text-decoration: none; text-align: center;">Commander</a>
+                        <a href="<?= $BASE ?>/CYBank/" class="btn-commander" style="text-decoration: none; text-align: center;">Commander</a>
                     </div>
                 </div>
 
@@ -1274,6 +1341,90 @@
     </div>
 
     <script src="../js/menu-toggle.js"></script>
+
+
+    <script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const filterRegime = document.getElementById('filter-regime');
+        const sortSelect = document.getElementById('catalog-sort');
+        const grids = document.querySelectorAll('.menu-grid');
+
+        filterRegime.addEventListener('change', function() {
+            const regimeChoisi = this.value;
+
+            if (regimeChoisi === 'tous') {
+                window.location.reload(); 
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('action', 'ajax_filter');
+            formData.append('regime', regimeChoisi);
+
+            grids[0].innerHTML = "<p style='color:white; text-align:center; width:100%; padding:2rem;'>Recherche en cours...</p>";
+            
+            grids.forEach((grid, index) => {
+                if(index > 0) grid.style.display = 'none';
+                const sectionHeader = grid.previousElementSibling;
+                if(sectionHeader && sectionHeader.classList.contains('section-header') && index > 0) {
+                    sectionHeader.style.display = 'none';
+                }
+            });
+
+            fetch(window.location.href, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.text())
+            .then(html => {
+                if (html.trim() === "reload") {
+                    window.location.reload();
+                } else {
+                    grids[0].innerHTML = html; 
+                    if (sortSelect.value !== 'defaut') appliquerTri();
+                }
+            })
+            .catch(() => {
+                grids[0].innerHTML = "<p style='color:red; text-align:center; width:100%;'>Erreur de connexion lors du filtrage.</p>";
+            });
+        });
+
+        function appliquerTri() {
+            const critere = sortSelect.value;
+            if (critere === 'defaut') return;
+
+            grids.forEach(grid => {
+                if (grid.style.display === 'none') return;
+
+                const cards = Array.from(grid.querySelectorAll('.menu-card'));
+
+                cards.sort((cardA, cardB) => {
+                    const priceA = parseFloat(cardA.dataset.price || 0);
+                    const priceB = parseFloat(cardB.dataset.price || 0);
+                    const salesA = parseInt(cardA.dataset.sales || 0);
+                    const salesB = parseInt(cardB.dataset.sales || 0);
+
+                    if (critere === 'prix-croissant') {
+                        return priceA - priceB;
+                    } else if (critere === 'prix-decroissant') {
+                        return priceB - priceA;
+                    } else if (critere === 'populaire') {
+                        return salesB - salesA; 
+                    }
+                    return 0;
+                });
+
+                grid.innerHTML = "";
+                cards.forEach(card => grid.appendChild(card));
+            });
+        }
+
+        sortSelect.addEventListener('change', appliquerTri);
+    });
+    </script>
+
+
+
 </body>
 
 </html>

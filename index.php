@@ -1,3 +1,4 @@
+<?php $BASE = preg_replace('#(/(?:Admin|Carte|Cuisinier|LOG|Livraison|Notation|Profil|Sujet|CYBank)(?:/.*)?)?/[^/]*$#', '', $_SERVER['SCRIPT_NAME']); ?>
 <?php require_once '../../protection.php'; ?>
 
 <!DOCTYPE html>
@@ -9,12 +10,10 @@
   <title>Cy Restaurant</title>
   <link rel="stylesheet" href="accueil.css">
   <link rel="stylesheet" href="index.css">
+  <link id="theme-style" rel="stylesheet" href="">
 
  
   <style>
-    /*Pour afficher soit l'un soit l'autre*/
-
-    /*Pour la position sticky on là met ici et pas dans .navbar sinon bah ça s'applique pas vu que pcnavbar et mobilenavbar son parents de la classe nav */
     .pcnavbar {
       display: block;
       position: sticky;
@@ -42,10 +41,6 @@
 </head>
 
 <body>
-
-<!--  La barre du haut qui s'adapte en fonction du terminal utilisateur  -->
-
-  <!--  Pour pc  -->
   <div class="pcnavbar">
     <nav class="navbar">
       <div class="navbar-inner">
@@ -57,9 +52,9 @@
           <li><a href="#menu">Populaires</a></li>
           <li><a href="#features">Restaurant</a></li>
           <li><a href="#order">Commander</a></li>
-          <li><a href="/ProjetCYJ/CYJ/Carte/">Carte</a></li>
+          <li><a href="<?= $BASE ?>/Carte/">Carte</a></li>
           <?php if ($est_connecte && $role_actuel === "livreur"): ?>
-            <li><a href="/ProjetCYJ/CYJ/Livraison/">Livraison</a></li>
+            <li><a href="<?= $BASE ?>/Livraison/">Livraison</a></li>
           <?php endif; ?>
           <?php if ($est_connecte && ($role_actuel === "admin" || $role_actuel === "colab.")): ?>
             <li><a href="../CYF/">CYF</a></li>
@@ -67,16 +62,16 @@
             <li><a href="#Le lien ne fonctionne pas puisque vous n'êtes pas identifie">CYF</li>
           <?php endif; ?>  
           <?php if ($est_connecte && ($role_actuel === "admin" || $role_actuel === "fakeadmin")): ?>
-            <li><a href="/ProjetCYJ/CYJ/Admin/">Admin</a></li>
+            <li><a href="<?= $BASE ?>/Admin/">Admin</a></li>
           <?php endif; ?>
           <?php if ($est_connecte && ($role_actuel === "admin" || $role_actuel === "chef" || $role_actuel === "fakeadmin")): ?>
-            <li><a href="/ProjetCYJ/CYJ/Cuisinier/">Cuisine</a></li>
+            <li><a href="<?= $BASE ?>/Cuisinier/">Cuisine</a></li>
           <?php endif; ?>
         </ul>
 
         <div class="navbar-auth">
           <?php if ($est_connecte): ?>
-            <a href="/ProjetCYJ/CYJ/Profil/" style="text-decoration:none">
+            <a href="<?= $BASE ?>/Profil/" style="text-decoration:none">
               <span class="nav-user">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                   <path
@@ -90,15 +85,15 @@
               <button type="submit" class="btn-nav">D&eacute;connexion</button>
             </form>
           <?php else: ?>
-            <a href="/ProjetCYJ/CYJ/LOG/login" class="btn-nav">Connexion</a>
-            <a href="/ProjetCYJ/CYJ/LOG/signup" class="btn-nav btn-nav-primary">S'inscrire</a>
+            <a href="<?= $BASE ?>/LOG/login" class="btn-nav">Connexion</a>
+            <a href="<?= $BASE ?>/LOG/signup" class="btn-nav btn-nav-primary">S'inscrire</a>
           <?php endif; ?>
         </div>
       </div>
     </nav>
   </div>
 
-  <!--  Pour mobile  -->
+
   <div class="mobilenavbar">
     <nav class="navbar">
       <div class="navbar-inner">
@@ -123,7 +118,7 @@
       <?php if (!($est_connecte)): ?>
         <nav id="menuNav">
           <div class="mainMenuItemLogin">
-            <a href="/ProjetCYJ/CYJ/LOG/login">
+            <a href="<?= $BASE ?>/LOG/login">
               <span class="mainMenuItemCollapsable">
                 <img src="images/accueil.png" alt="Menu item">
               </span>
@@ -132,7 +127,7 @@
           </div>
 
           <div class="mainMenuItemSignIn">
-            <a href="/ProjetCYJ/CYJ/LOG/signup">
+            <a href="<?= $BASE ?>/LOG/signup">
               <span class="mainMenuItemCollapsable">
                 <img src="images/rechercher.png" alt="Menu item">
               </span>
@@ -143,7 +138,7 @@
 
         <?php if ($est_connecte): ?>
           <div class="mainMenuItemLogin">
-            <a href="/ProjetCYJ/CYJ/Profil/">
+            <a href="<?= $BASE ?>/Profil/">
               <span class="mainMenuItemCollapsable">
                 <img src="images/accueil.png" alt="Menu item">
               </span>
@@ -171,7 +166,7 @@
         </div>
 
         <div class="mainMenuItemLogin">
-          <a href="/ProjetCYJ/CYJ/Carte/">
+          <a href="<?= $BASE ?>/Carte/">
             <span class="mainMenuItemCollapsable">
               <img src="images/accueil.png" alt="Menu item">
             </span>
@@ -181,7 +176,7 @@
 
         <?php if ($est_connecte && ($role_actuel === "admin" || $role_actuel === "fakeadmin")): ?>
           <div class="mainMenuItemLogin">
-            <a href="/ProjetCYJ/CYJ/Admin/">
+            <a href="<?= $BASE ?>/Admin/">
               <span class="mainMenuItemCollapsable">
                 <img src="images/accueil.png" alt="Menu item">
               </span>
@@ -192,7 +187,7 @@
 
         <?php if ($est_connecte && $role_actuel === "livreur"): ?>
           <div class="mainMenuItemLogin">
-            <a href="/ProjetCYJ/CYJ/Livraison/">
+            <a href="<?= $BASE ?>/Livraison/">
               <span class="mainMenuItemCollapsable">
                 <img src="images/accueil.png" alt="Menu item">
               </span>
@@ -204,7 +199,7 @@
 
         <?php if ($est_connecte && ($role_actuel === "admin" || $role_actuel === "chef" || $role_actuel === "fakeadmin")): ?>
           <div class="mainMenuItemLogin">
-            <a href="/ProjetCYJ/CYJ/Cuisinier/">
+            <a href="<?= $BASE ?>/Cuisinier/">
               <span class="mainMenuItemCollapsable">
                 <img src="images/accueil.png" alt="Menu item">
               </span>
@@ -242,8 +237,8 @@
       <p class="hero-sub">Des saveurs authentiques pr&eacute;par&eacute;es avec soin.<br>Commandez en ligne ou venez
         nous rendre visite.</p>
       <div class="hero-ctas">
-        <a href="/ProjetCYJ/CYJ/Carte/" class="btn-hero-primary">Voir la carte</a>
-        <a href="/ProjetCYJ/CYJ/Livraison/" class="btn-hero-secondary">Commander en livraison</a>
+        <a href="<?= $BASE ?>/Carte/" class="btn-hero-primary">Voir la carte</a>
+        <a href="<?= $BASE ?>/Livraison/" class="btn-hero-secondary">Commander en livraison</a>
       </div>
     </div>
     <div class="hero-scroll">
@@ -268,7 +263,7 @@
           fait l'unanimit&eacute; depuis l'ouverture.</p>
         <div class="featured-price-row">
           <span class="featured-price">8.90 &euro;</span>
-          <a href="/ProjetCYJ/CYJ/Carte/#burgers" class="btn-dark">Commander</a>
+          <a href="<?= $BASE ?>/Carte/#burgers" class="btn-dark">Commander</a>
         </div>
       </div>
     </div>
@@ -283,7 +278,7 @@
 
     <div class="menu-grid">
 
-      <a href="/ProjetCYJ/CYJ/Carte/#burgers" class="menu-card">
+      <a href="<?= $BASE ?>/Carte/#burgers" class="menu-card">
         <div class="menu-card-img" style="background: linear-gradient(135deg,#fff3e0,#ffe0b2)">
           <span class="menu-emoji">&#127828;</span>
         </div>
@@ -298,7 +293,7 @@
         </div>
       </a>
 
-      <a href="/ProjetCYJ/CYJ/Carte/#pizzas" class="menu-card">
+      <a href="<?= $BASE ?>/Carte/#pizzas" class="menu-card">
         <div class="menu-card-img" style="background: linear-gradient(135deg,#fce4ec,#f8bbd0)">
           <span class="menu-emoji">&#127829;</span>
         </div>
@@ -313,7 +308,7 @@
         </div>
       </a>
 
-      <a href="/ProjetCYJ/CYJ/Carte/#wraps" class="menu-card">
+      <a href="<?= $BASE ?>/Carte/#wraps" class="menu-card">
         <div class="menu-card-img" style="background: linear-gradient(135deg,#e8f5e9,#c8e6c9)">
           <span class="menu-emoji">&#127790;</span>
         </div>
@@ -328,7 +323,7 @@
         </div>
       </a>
 
-      <a href="/ProjetCYJ/CYJ/Carte/#burgers" class="menu-card">
+      <a href="<?= $BASE ?>/Carte/#burgers" class="menu-card">
         <div class="menu-card-img" style="background: linear-gradient(135deg,#fff3e0,#ffccbc)">
           <span class="menu-emoji">&#127828;</span>
         </div>
@@ -343,7 +338,7 @@
         </div>
       </a>
 
-      <a href="/ProjetCYJ/CYJ/Carte/#sides" class="menu-card">
+      <a href="<?= $BASE ?>/Carte/#sides" class="menu-card">
         <div class="menu-card-img" style="background: linear-gradient(135deg,#fff9c4,#fff176)">
           <span class="menu-emoji">&#127839;</span>
         </div>
@@ -358,7 +353,7 @@
         </div>
       </a>
 
-      <a href="/ProjetCYJ/CYJ/Carte/#wraps" class="menu-card">
+      <a href="<?= $BASE ?>/Carte/#wraps" class="menu-card">
         <div class="menu-card-img" style="background: linear-gradient(135deg,#e8f5e9,#a5d6a7)">
           <span class="menu-emoji">&#127790;</span>
         </div>
@@ -373,7 +368,7 @@
         </div>
       </a>
 
-      <a href="/ProjetCYJ/CYJ/Carte/#desserts" class="menu-card">
+      <a href="<?= $BASE ?>/Carte/#desserts" class="menu-card">
         <div class="menu-card-img" style="background: linear-gradient(135deg,#fce4ec,#f48fb1)">
           <span class="menu-emoji">&#127846;</span>
         </div>
@@ -388,7 +383,7 @@
         </div>
       </a>
 
-      <a href="/ProjetCYJ/CYJ/Carte/#pizzas" class="menu-card">
+      <a href="<?= $BASE ?>/Carte/#pizzas" class="menu-card">
         <div class="menu-card-img" style="background: linear-gradient(135deg,#ffebee,#ef9a9a)">
           <span class="menu-emoji">&#127829;</span>
         </div>
@@ -403,7 +398,7 @@
         </div>
       </a>
 
-      <a href="/ProjetCYJ/CYJ/Carte/#boissons" class="menu-card">
+      <a href="<?= $BASE ?>/Carte/#boissons" class="menu-card">
         <div class="menu-card-img" style="background: linear-gradient(135deg,#e3f2fd,#90caf9)">
           <span class="menu-emoji">&#129380;</span>
         </div>
@@ -418,7 +413,7 @@
         </div>
       </a>
 
-      <a href="/ProjetCYJ/CYJ/Carte/#sides" class="menu-card">
+      <a href="<?= $BASE ?>/Carte/#sides" class="menu-card">
         <div class="menu-card-img" style="background: linear-gradient(135deg,#fff9c4,#ffee58)">
           <span class="menu-emoji">&#127839;</span>
         </div>
@@ -436,7 +431,7 @@
     </div>
 
     <div class="voir-tout-wrap">
-      <a href="/ProjetCYJ/CYJ/Carte/" class="voir-tout-btn">Voir toute la carte &rarr;</a>
+      <a href="<?= $BASE ?>/Carte/" class="voir-tout-btn">Voir toute la carte &rarr;</a>
     </div>
   </section>
 
@@ -488,7 +483,7 @@
         <p>Cy Restaurant est n&eacute; d'une id&eacute;e simple : proposer une vraie bonne cuisine, accessible, dans une
           ambiance d&eacute;contract&eacute;e. Burgers, pizzas, wraps &mdash; une carte vari&eacute;e pour tous les
           go&ucirc;ts.</p>
-        <a href="/ProjetCYJ/CYJ/Carte/" class="btn-dark">D&eacute;couvrir la carte</a>
+        <a href="<?= $BASE ?>/Carte/" class="btn-dark">D&eacute;couvrir la carte</a>
       </div>
       <div class="about-badges">
         <div class="about-badge">
@@ -519,14 +514,14 @@
         <p>Commandez directement en ligne ou venez nous rendre visite sur le campus. La cuisine est ouverte tous les
           jours de 11h &agrave; 23h.</p>
         <div class="order-btns">
-          <a href="/ProjetCYJ/CYJ/Carte/" class="btn-order-primary">
+          <a href="<?= $BASE ?>/Carte/" class="btn-order-primary">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
               <path
                 d="M19 6h-2c0-2.8-2.2-5-5-5S7 3.2 7 6H5c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-7-3c1.7 0 3 1.3 3 3H9c0-1.7 1.3-3 3-3z" />
             </svg>
             Voir la carte
           </a>
-          <a href="/ProjetCYJ/CYJ/Livraison/" class="btn-order-secondary">
+          <a href="<?= $BASE ?>/Livraison/" class="btn-order-secondary">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
               <path
                 d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.7 1.3 3 3 3s3-1.3 3-3h6c0 1.7 1.3 3 3 3s3-1.3 3-3h2v-5l-3-4zM6 18.5c-.8 0-1.5-.7-1.5-1.5s.7-1.5 1.5-1.5 1.5.7 1.5 1.5-.7 1.5-1.5 1.5zm13.5-9l1.96 2.5H17V9.5h2.5zm-1.5 9c-.8 0-1.5-.7-1.5-1.5s.7-1.5 1.5-1.5 1.5.7 1.5 1.5-.7 1.5-1.5 1.5z" />
@@ -534,7 +529,7 @@
             Commander en livraison
           </a>
           <?php if ($est_connecte): ?>
-            <a href="/ProjetCYJ/CYJ/Profil" class="btn-order-ghost">Mon compte</a>
+            <a href="<?= $BASE ?>/Profil" class="btn-order-ghost">Mon compte</a>
           <?php endif; ?>
         </div>
       </div>
@@ -583,12 +578,12 @@
         <p>Creative Yumland &mdash; CY Tech, Cergy</p>
       </div>
       <div class="footer-links">
-        <a href="/ProjetCYJ/CYJ/Carte/">La Carte</a>
-        <a href="/ProjetCYJ/CYJ/Livraison/">Livraison</a>
+        <a href="<?= $BASE ?>/Carte/">La Carte</a>
+        <a href="<?= $BASE ?>/Livraison/">Livraison</a>
         <?php if ($est_connecte): ?>
-          <a href="/ProjetCYJ/CYJ/Profil">Mon compte</a>
+          <a href="<?= $BASE ?>/Profil">Mon compte</a>
         <?php else: ?>
-          <a href="/ProjetCYJ/CYJ/LOG/login">Connexion</a>
+          <a href="<?= $BASE ?>/LOG/login">Connexion</a>
         <?php endif; ?>
         <a href="/legal">Mentions l&eacute;gales</a>
       </div>
@@ -597,7 +592,17 @@
       <p>&copy; 2026 Cy Restaurant &mdash; Creative Yumland</p>
     </div>
   </footer>
+  <!-- Widget de sélection de thème -->
+  <div id="theme-switcher-widget" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; background: var(--dark); padding: 10px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); border: 1px solid var(--orange); display: flex; align-items: center; gap: 10px;">
+    <label for="theme-select" style="color: var(--white); font-weight: bold; font-size: 14px; margin: 0;">Thème</label>
+    <select id="theme-select" style="background: var(--white); color: var(--dark); border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-family: inherit; font-size: 14px; outline: none;">
+        <option value="defaut">Défaut</option>
+        <option value="clair">Clair</option>
+    </select>
+  </div>
+
   <script src="js/menu-toggle.js"></script>
+  <script src="js/theme-switcher.js"></script>
 </body>
 
 </html>

@@ -1,4 +1,5 @@
 <?php
+$BASE = preg_replace('#(/(?:Admin|Carte|Cuisinier|LOG|Livraison|Notation|Profil|Sujet|CYBank)(?:/.*)?)?/[^/]*$#', '', $_SERVER['SCRIPT_NAME']);
 require_once '../../../protection.php';
 $pdo_users = $pdo;
 require_once '../../../../db_config_yumland.php';
@@ -276,7 +277,7 @@ if (!$est_connecte) {
                 $API         = getAPIKey($vendeur);
                 $transaction = uniqid();
                 $montant_fmt = number_format($delta_a_payer, 2, '.', '');
-                $retour_url  = "https://alexandre-gourdon.fr/ProjetCYJ/CYJ/Profil/Detail.php?id=" . $cid_post;
+                $retour_url  = "https://alexandre-gourdon.fr{$BASE}/Profil/Detail.php?id=" . $cid_post;
                 $control     = md5($API . "#" . $transaction . "#" . $montant_fmt . "#" . $vendeur . "#" . $retour_url . "#");
 
                 echo "<!DOCTYPE html><html><body>";
@@ -420,8 +421,8 @@ $h = static function ($v) {
         </div>
         <p>Vous devez &ecirc;tre connect&eacute; pour acc&eacute;der au détail d'une commande.</p>
         <div class="prof-card-actions">
-          <a href="/ProjetCYJ/CYJ/LOG/login" class="prof-btn prof-btn-primary">Se connecter</a>
-          <a href="/ProjetCYJ/CYJ/LOG/signup" class="prof-btn prof-btn-secondary">S'inscrire</a>
+          <a href="<?= $BASE ?>/LOG/login" class="prof-btn prof-btn-primary">Se connecter</a>
+          <a href="<?= $BASE ?>/LOG/signup" class="prof-btn prof-btn-secondary">S'inscrire</a>
         </div>
       </div>
     </main>
@@ -652,7 +653,17 @@ $h = static function ($v) {
       <div class="detail-actions">
         <a href="historique.php" class="prof-btn prof-btn-secondary">&larr; Retour à l'historique</a>
         <?php if ($commande['statut_production'] === 'Livré'): ?>
-          <a href="/ProjetCYJ/CYJ/Notation" class="prof-btn prof-btn-primary">Noter cette commande</a>
+          <?php
+             try { $pdo_commandes->exec("ALTER TABLE avis_clients ADD COLUMN id_commande INT DEFAULT NULL"); } catch (Exception $e) {}
+             $stmtAvis = $pdo_commandes->prepare("SELECT 1 FROM avis_clients WHERE id_commande = ?");
+             $stmtAvis->execute([$commande['id']]);
+             $deja_note = $stmtAvis->fetch();
+          ?>
+          <?php if (!$deja_note): ?>
+            <a href="../Notation/index.php?id=<?= (int)$commande['id'] ?>" class="prof-btn prof-btn-primary">Noter cette commande</a>
+          <?php else: ?>
+            <button class="prof-btn prof-btn-secondary" disabled style="opacity: 0.6; cursor: not-allowed;">Commande déjà notée</button>
+          <?php endif; ?>
         <?php endif; ?>
       </div>
 

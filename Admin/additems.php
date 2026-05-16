@@ -1,5 +1,6 @@
 <?php  
 
+$BASE = preg_replace('#(/(?:Admin|Carte|Cuisinier|LOG|Livraison|Notation|Profil|Sujet|CYBank)(?:/.*)?)?/[^/]*$#', '', $_SERVER['SCRIPT_NAME']);
     require_once '../../../protection.php';
     $pdo_users = $pdo;
     require_once '../../../../db_config_yumland.php';
@@ -134,9 +135,9 @@
             </a>
 
             <ul class="navbar-links">
-            <li><a href="/ProjetCYJ/CYJ/Carte/">Carte</a></li>
+            <li><a href="<?= $BASE ?>/Carte/">Carte</a></li>
             <?php if ($est_connecte && $role_actuel === "livreur"): ?>
-                <li><a href="/ProjetCYJ/CYJ/Livraison/">Livraison</a></li>
+                <li><a href="<?= $BASE ?>/Livraison/">Livraison</a></li>
             <?php endif; ?>
             <?php if ($est_connecte && ($role_actuel === "admin" || $role_actuel === "colab.")): ?>
                 <li><a href="../CYF/">CYF</a></li>
@@ -144,16 +145,16 @@
                 <li><a href="#Le lien ne fonctionne pas puisque vous n'êtes pas identifie">CYF</li>
             <?php endif; ?>  
             <?php if ($est_connecte && ($role_actuel === "admin" || $role_actuel === "fakeadmin")): ?>
-                <li><a href="/ProjetCYJ/CYJ/Admin/">Admin</a></li>
+                <li><a href="<?= $BASE ?>/Admin/">Admin</a></li>
             <?php endif; ?>
             <?php if ($est_connecte && ($role_actuel === "admin" || $role_actuel === "chef" || $role_actuel === "fakeadmin")): ?>
-                <li><a href="/ProjetCYJ/CYJ/Cuisinier/">Cuisine</a></li>
+                <li><a href="<?= $BASE ?>/Cuisinier/">Cuisine</a></li>
             <?php endif; ?>
             </ul>
 
             <div class="navbar-auth">
             <?php if ($est_connecte): ?>
-                <a href="/ProjetCYJ/CYJ/Profil/" style="text-decoration:none">
+                <a href="<?= $BASE ?>/Profil/" style="text-decoration:none">
                 <span class="nav-user">
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                     <path
@@ -167,8 +168,8 @@
                 <button type="submit" class="btn-nav">D&eacute;connexion</button>
                 </form>
             <?php else: ?>
-                <a href="/ProjetCYJ/CYJ/LOG/login" class="btn-nav">Connexion</a>
-                <a href="/ProjetCYJ/CYJ/LOG/signup" class="btn-nav btn-nav-primary">S'inscrire</a>
+                <a href="<?= $BASE ?>/LOG/login" class="btn-nav">Connexion</a>
+                <a href="<?= $BASE ?>/LOG/signup" class="btn-nav btn-nav-primary">S'inscrire</a>
             <?php endif; ?>
             </div>
         </div>
@@ -200,7 +201,7 @@
         <?php if (!($est_connecte)): ?>
             <nav id="menuNav">
             <div class="mainMenuItemLogin">
-                <a href="/ProjetCYJ/CYJ/LOG/login">
+                <a href="<?= $BASE ?>/LOG/login">
                 <span class="mainMenuItemCollapsable">
                     <img src="images/accueil.png" alt="Menu item">
                 </span>
@@ -209,7 +210,7 @@
             </div>
 
             <div class="mainMenuItemSignIn">
-                <a href="/ProjetCYJ/CYJ/LOG/signup">
+                <a href="<?= $BASE ?>/LOG/signup">
                 <span class="mainMenuItemCollapsable">
                     <img src="images/rechercher.png" alt="Menu item">
                 </span>
@@ -237,7 +238,7 @@
             </div>
 
             <div class="mainMenuItemLogin">
-            <a href="/ProjetCYJ/CYJ/Carte/">
+            <a href="<?= $BASE ?>/Carte/">
                 <span class="mainMenuItemCollapsable">
                 <img src="images/accueil.png" alt="Menu item">
                 </span>
@@ -247,7 +248,7 @@
 
             <?php if ($est_connecte && ($role_actuel === "admin" || $role_actuel === "fakeadmin")): ?>
             <div class="mainMenuItemLogin">
-                <a href="/ProjetCYJ/CYJ/Admin/">
+                <a href="<?= $BASE ?>/Admin/">
                 <span class="mainMenuItemCollapsable">
                     <img src="images/accueil.png" alt="Menu item">
                 </span>
@@ -258,7 +259,7 @@
 
             <?php if ($est_connecte && $role_actuel === "livreur"): ?>
             <div class="mainMenuItemLogin">
-                <a href="/ProjetCYJ/CYJ/Livraison/">
+                <a href="<?= $BASE ?>/Livraison/">
                 <span class="mainMenuItemCollapsable">
                     <img src="images/accueil.png" alt="Menu item">
                 </span>
@@ -270,7 +271,7 @@
 
             <?php if ($est_connecte && ($role_actuel === "admin" || $role_actuel === "chef" || $role_actuel === "fakeadmin")): ?>
             <div class="mainMenuItemLogin">
-                <a href="/ProjetCYJ/CYJ/Cuisinier/">
+                <a href="<?= $BASE ?>/Cuisinier/">
                 <span class="mainMenuItemCollapsable">
                     <img src="images/accueil.png" alt="Menu item">
                 </span>
