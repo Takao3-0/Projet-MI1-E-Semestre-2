@@ -111,7 +111,7 @@ if ($est_connecte && $role_actuel === 'livreur') {
     $full_address_js = json_encode($full_address);
 
 } else {
-    header('Location: ' . \$BASE . '/index.php');
+    header('Location: ' . $BASE . '/index.php');
     exit;
 }
 ?>

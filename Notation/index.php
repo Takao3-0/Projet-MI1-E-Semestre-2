@@ -10,7 +10,7 @@ $pdo_commandes = $pdo;
 try { $pdo_commandes->exec("ALTER TABLE avis_clients ADD COLUMN id_commande INT DEFAULT NULL"); } catch (Exception $e) {}
 
 $stmt = $pdo_users->prepare("SELECT * FROM users WHERE username = ?");
-$stmt->execute([$user_actuel['username']]);
+$stmt->execute([$nom_affiche]);
 $infos_completas_user = $stmt->fetch();
 
 $id_commande = isset($_GET['id']) ? (int) $_GET['id'] : 0;
@@ -66,7 +66,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($stmt->execute([$id_client, $nom_client, $mail_client, $commentaire, $note_livraison, $note_qualite, $id_commande])) {
             echo "<script>
                 alert('Avis enregistré avec succès !');
-                window.location.href = '<?= $BASE ?>/index.php';
+                window.location.href = '$BASE/index.php';
             </script>";
             exit();
         }

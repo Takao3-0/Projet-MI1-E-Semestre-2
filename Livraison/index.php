@@ -13,7 +13,7 @@ $BASE = preg_replace('#(/(?:Admin|Carte|Cuisinier|LOG|Livraison|Notation|Profil|
     const LIVRAISON_SQL_UNASSIGNED = '(' . LIVREUR_ID_COL . ' IS NULL OR ' . LIVREUR_ID_COL . ' = 0)';
 
     if (!$est_connecte || $role_actuel !== 'livreur') {
-        header('Location: ' . \$BASE . '/index.php');
+        header('Location: ' . $BASE . '/index.php');
         exit;
     }
 
