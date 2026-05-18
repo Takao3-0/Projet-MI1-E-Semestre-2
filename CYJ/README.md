@@ -1,4 +1,5 @@
 # Projet-MI1-E-Semestre-2
+# Projet-MI1-E-Semestre-2
 # Creative-Yumland 🍽️
 
 Projet Web (préING2 • 2025-2026) : création d’un site de restaurant / chaîne de restaurants avec une application **multi-utilisateurs** couvrant toute la chaîne de commande : **choix client → commande → paiement → préparation → livraison → notation**.
@@ -39,7 +40,8 @@ Développer une application web permettant :
 - Base de données MariaDB
 
 ## Accès (démo en ligne)
-Le projet se teste directement via le site https://alexandre-gourdon.fr.
+Le projet se teste directement via le site (aucune installation locale nécessaire).
+https://alexandre-gourdon.fr
 
 ### Comptes de test
 - **Cuisinier**
@@ -61,3 +63,4 @@ Le projet se teste directement via le site https://alexandre-gourdon.fr.
 
 ---
 CY Tech • préING2 • 2025-2026
+

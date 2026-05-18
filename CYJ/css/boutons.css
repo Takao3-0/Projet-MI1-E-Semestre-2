@@ -1,0 +1,58 @@
+.card {
+    background-color: var(--card-bg);
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    box-shadow: var(--shadow);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    text-decoration: none;
+    color: inherit;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    border: 1px solid transparent;
+}
+
+.logcard
+{
+    background-color: var(--card-bg);
+    border-radius: var(--border-radius);   
+}
+
+
+
+/* le bouton burger, un cercle gris discret au hover */
+.menucard {
+    background-color: transparent;
+    border-radius: 50%;
+    transition: background-color 0.2s ease;
+}
+
+.menucard:hover {
+    background-color: rgba(0, 0, 0, 0.08);
+    border-radius: 50%;
+}
+
+.card:hover, .logcard:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+    border-color: var(--accent-color);
+}
+
+.card-title, .logcard-title{
+    font-weight: bold;
+    font-size: 1.2rem;
+    margin-bottom: 0.5rem;
+    color: var(--accent-color);
+}
+
+.card-desc, .logcard-desc {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.card.disabled, .logcard.disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    pointer-events: none;
+    background-color: rgba(0,0,0,0.02);
+}
