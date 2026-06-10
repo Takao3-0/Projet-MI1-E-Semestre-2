@@ -1,15 +1,26 @@
-<?php $BASE = preg_replace('#(/(?:Admin|Carte|Cuisinier|LOG|Livraison|Notation|Profil|Sujet|CYBank)(?:/.*)?)?/[^/]*$#', '', $_SERVER['SCRIPT_NAME']); ?>
-<?php require_once '../../../protection.php'; 
-    $pdo_users = $pdo;
-    require_once '../../../../db_config_yumland.php';
-    $pdo_commandes = $pdo;
+<?php
+// on calcule le chemin de base du site pour que les liens marchent partout
+$BASE = preg_replace(
+    '#(/(?:Admin|Carte|Cuisinier|LOG|Livraison|Notation|Profil|Sujet|CYBank)(?:/.*)?)?/[^/]*$#',
+    "",
+    $_SERVER["SCRIPT_NAME"],
+); ?>
+<?php // protection.php demarre la session et nous donne $est_connecte, $nom_affiche, $role_actuel et $pdo
 
+
+require_once "../../../protection.php"; // base des comptes d'un cote, base des commandes de l'autre
+$pdo_users = $pdo;
+require_once "../../../../db_config_yumland.php";
+$pdo_commandes = $pdo; // on retrouve la ligne du compte connecte pour pouvoir utiliser son email juste apres
 $stmt = $pdo_users->prepare("SELECT * FROM users WHERE username = ?");
 $stmt->execute([$nom_affiche]);
-$user_actuel = $stmt->fetch();
 
-$stmt = $pdo_commandes->prepare("SELECT * FROM commandes WHERE email = ? AND statut = 'Payé' AND statut_production != 'Livré' ORDER BY date_commande DESC");
-$stmt->execute([$user_actuel['email']]);
+$user_actuel = $stmt->fetch(); // on prend les commandes payees mais pas encore livrees, c'est a dire celles qui sont en cours de preparation
+// et on les trie de la plus recente a la plus ancienne
+$stmt = $pdo_commandes->prepare(
+    "SELECT * FROM commandes WHERE email = ? AND statut = 'Payé' AND statut_production != 'Livré' ORDER BY date_commande DESC",
+);
+$stmt->execute([$user_actuel["email"]]);
 $commandes_en_cours = $stmt->fetchAll();
 ?>
 
@@ -41,6 +52,7 @@ $commandes_en_cours = $stmt->fetchAll();
   </header>
 
   <?php if (!$est_connecte): ?>
+  <!-- pas connecte donc on affiche seulement le message d'acces restreint -->
 
     <main class="prof-main">
       <div class="prof-card prof-card-warn">
@@ -54,8 +66,11 @@ $commandes_en_cours = $stmt->fetchAll();
           <a href="<?= $BASE ?>/LOG/signup" class="prof-btn prof-btn-secondary">S'inscrire</a>
         </div>
       </div>
+    </main>
 
-  <?php else: ?>
+  <?php // si la liste est vide on previent l'utilisateur, sinon on affiche une carte par commande
+
+      else: ?>
     <main class="prof-main">
         <section class="historique">
             <div class="titre">
@@ -64,27 +79,33 @@ $commandes_en_cours = $stmt->fetchAll();
             </div>
 
             <div>
+                <?php
+      // si la liste est vide on previent l'utilisateur, sinon on affiche une carte par commande
+      ?>
                 <?php if (empty($commandes_en_cours)): ?>
                     <div class="prof-card prof-card-info" style="justify-content: center; opacity: 0.8;">
                         <p style="margin: 0; font-size: 0.9rem;">Vous n'avez aucune commande en cours pour le moment.</p>
                     </div>
                 <?php else: ?>
-                    <?php foreach($commandes_en_cours as $commande): ?>
+                    <?php foreach ($commandes_en_cours as $commande): ?>
                         <div class="prof-card prof-card-info">
                             <div>
-                                <span class="date">Commande du <?= date('d/m/Y à H:i', strtotime($commande['date_commande'])) ?></span>
+                                <span class="date">Commande du <?= date(
+                                    "d/m/Y à H:i",
+                                    strtotime($commande["date_commande"]),
+                                ) ?></span>
                                 <div class="nb_articles">
                                     <strong>Statut : </strong>
                                     <span style="color: var(--selected-item-orange);">
-                                        <?= htmlspecialchars($commande['statut_production']) ?>
+                                        <?= htmlspecialchars($commande["statut_production"]) ?>
                                     </span>
                                 </div>
                                 <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 5px;">
-                                    <?= $commande['nb_articles'] ?> article(s)
+                                    <?= $commande["nb_articles"] ?> article(s)
                                 </div>
                             </div>
                             <div class="prix">
-                                <?= number_format($commande['total'], 2) ?> €
+                                <?= number_format($commande["total"], 2) ?> €
                             </div>
                         </div>
                     <?php endforeach; ?>

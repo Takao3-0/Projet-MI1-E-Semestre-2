@@ -307,7 +307,10 @@
     border-radius: 10px;
     cursor: pointer;
     box-shadow: 0 4px 14px rgba(255, 125, 41, 0.35);
-    transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease,
+        filter 0.2s ease;
 }
 
 a.btn-confirm-livraison,

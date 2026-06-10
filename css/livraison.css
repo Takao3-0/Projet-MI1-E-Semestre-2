@@ -1,70 +1,70 @@
-body{
+body {
     background-color: var(--bg-color);
     color: var(--text-main);
 }
 
-header{
+header {
     border-radius: 14px;
     padding: 16px;
     margin-bottom: 14px;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
 }
 
-.Commande{
+.Commande {
     display: flex;
     align-items: center;
     justify-content: space-between;
     margin-bottom: 8px;
 }
 
-.statut{
+.statut {
     color: var(--success);
     padding: 4px 10px;
     font-weight: 600;
 }
 
-.num{
+.num {
     font-size: 20px;
     font-weight: 700;
     margin: 0;
 }
 
-.Client{
+.Client {
     font-size: 14px;
     color: var(--text-muted);
 }
 
-header p{
+header p {
     margin: 4px 0;
 }
 
-.Adresse{
+.Adresse {
     border-radius: 14px;
     padding: 16px;
     margin-bottom: 14px;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06)
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
 }
 
-.Adresse h2{
+.Adresse h2 {
     font-size: 16px;
     color: var(--text-muted);
     margin-bottom: 10px;
 }
 
-.Adresse p{
+.Adresse p {
     font-size: 17px;
     font-weight: 500;
     line-height: 1.4;
     margin-bottom: 14px;
 }
 
-.Adresse div{
+.Adresse div {
     display: flex;
     flex-direction: column;
     gap: 10px;
 }
 
-.Adresse div a{
+.Adresse div a {
     display: block;
     padding: 14px;
     border-radius: 10px;
@@ -78,52 +78,52 @@ header p{
     color: var(--bg-color);
 }
 
-.Acces{
+.Acces {
     border-radius: 14px;
     padding: 14px;
     margin-bottom: 14px;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
 }
 
-.Acces ul{
+.Acces ul {
     list-style: none;
     padding: 0;
     margin: 0;
 }
 
-.Acces ul li{
+.Acces ul li {
     display: flex;
     padding: 6px 0;
     border-bottom: 1px solid var(--bg-color);
     font-size: 15px;
 }
 
-.Contact{
+.Contact {
     border-radius: 14px;
     padding: 16px;
     margin-bottom: 14px;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
 }
 
-.Contact h2{
+.Contact h2 {
     font-size: 16px;
     color: var(--text-muted);
     margin-bottom: 10px;
 }
 
-.Contact p{
+.Contact p {
     font-size: 16px;
     font-weight: 500;
     margin-bottom: 12px;
 }
 
-.Contact div{
+.Contact div {
     display: flex;
     flex-direction: column;
     gap: 10px;
 }
 
-.Contact div a{
+.Contact div a {
     display: block;
     width: 100%;
     padding: 14px;
@@ -136,17 +136,17 @@ header p{
     border: none;
 }
 
-.Appeler{
+.Appeler {
     background: var(--accent-hover);
     color: var(--bg-color);
 }
 
-.SMS{
+.SMS {
     background: var(--accent-hover);
     color: var(--bg-color);
 }
 
-.note{
+.note {
     border-left: 4px solid var(--info-yellow);
     border-radius: 10px;
     padding: 14px 16px;
@@ -154,35 +154,35 @@ header p{
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
 }
 
-.note h2{
+.note h2 {
     font-size: 16px;
     color: var(--text-muted);
     margin-bottom: 8px;
 }
 
-.note p{
+.note p {
     font-size: 15px;
     color: var(--text-muted);
     line-height: 1.5;
 }
 
-@media (min-width: 768px){
-    .Commande{
+@media (min-width: 768px) {
+    .Commande {
         flex-direction: row;
         align-items: center;
         justify-content: space-between;
     }
-    .num{
+    .num {
         font-size: 22px;
     }
-    .Adresse div{
+    .Adresse div {
         text-align: left;
         flex-direction: row;
     }
-    .Adresse div a{
-        display: inline-block;     
-        white-space: nowrap;        
-        padding: 12px 20px;         
+    .Adresse div a {
+        display: inline-block;
+        white-space: nowrap;
+        padding: 12px 20px;
         border-radius: 10px;
         font-size: 15px;
         font-weight: 600;
@@ -192,18 +192,18 @@ header p{
         border: none;
         margin-right: 10px;
     }
-    .Adresse p{
+    .Adresse p {
         font-size: 18px;
     }
-    .Contact div{
+    .Contact div {
         flex-direction: row;
         text-align: left;
     }
-    .Contact div a{
+    .Contact div a {
         flex: 0;
         margin-right: 10px;
     }
-    .Contact p{
+    .Contact p {
         font-size: 17px;
     }
 }

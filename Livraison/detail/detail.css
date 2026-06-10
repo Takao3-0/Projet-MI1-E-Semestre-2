@@ -173,7 +173,7 @@
 .map-pin {
     font-size: 1.5rem;
     line-height: 1;
-    filter: drop-shadow(0 2px 3px rgba(0,0,0,0.35));
+    filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.35));
 }
 
 .livraison-nav-btns {

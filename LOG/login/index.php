@@ -1,64 +1,63 @@
-<?php require_once '../../../../protection.php'; ?>
+<?php require_once "../../../../protection.php"; ?>
 
-<?php require_once '../../../../../db_config.php'; // Connexion MariaDB
+<?php
+require_once "../../../../../db_config.php"; // Connexion MariaDB
 
 $message = "";
-if (isset($_GET['ip_bannie']) && $_GET['ip_bannie'] === '1') {
-    $message = 'Cette adresse IP a été bannie. Vous ne pouvez pas utiliser le site avec ce réseau. Contactez l\'administration si vous pensez qu\'il s\'agit d\'une erreur.';
-} elseif (isset($_GET['bloque']) && $_GET['bloque'] === '1') {
-    $message = 'Votre compte a été bloqué. Vous ne pouvez plus accéder au site. Pour toute question, contactez l\'administration.';
+if (isset($_GET["ip_bannie"]) && $_GET["ip_bannie"] === "1") {
+    $message =
+        'Cette adresse IP a été bannie. Vous ne pouvez pas utiliser le site avec ce réseau. Contactez l\'administration si vous pensez qu\'il s\'agit d\'une erreur.';
+} elseif (isset($_GET["bloque"]) && $_GET["bloque"] === "1") {
+    $message =
+        'Votre compte a été bloqué. Vous ne pouvez plus accéder au site. Pour toute question, contactez l\'administration.';
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    
-    if (isset($_POST['username'], $_POST['password'])) {
-        $user_saisi = trim($_POST['username']);
-        $pass_saisi = $_POST['password'];
+if ($_SERVER["REQUEST_METHOD"] === "POST") {
+    if (isset($_POST["username"], $_POST["password"])) {
+        $user_saisi = trim($_POST["username"]);
+        $pass_saisi = $_POST["password"];
 
         $stmt = $pdo->prepare("SELECT * FROM users WHERE username = ? OR email = ? LIMIT 1");
         $stmt->execute([$user_saisi, $user_saisi]);
         $user_data = $stmt->fetch();
 
-        $hash = $user_data['password'] ?? '';
-        if ($user_data && $hash !== '' && $hash !== null && password_verify($pass_saisi, $hash)) {
-            $uid = (int) ($user_data['id'] ?? 0);
-            $role_u = (string) ($user_data['role'] ?? '');
+        $hash = $user_data["password"] ?? "";
+        if ($user_data && $hash !== "" && $hash !== null && password_verify($pass_saisi, $hash)) {
+            $uid = (int) ($user_data["id"] ?? 0);
+            $role_u = (string) ($user_data["role"] ?? "");
             $ip_c = cyj_client_ip();
             if ($uid > 0 && cyj_user_has_active_block($pdo, $uid)) {
                 $message = 'Ce compte a été bloqué. Contactez l\'administration.';
-            } elseif (
-                $ip_c !== ''
-                && cyj_ip_is_banned($pdo, $ip_c)
-                && !cyj_ip_ban_skipped_for_role($role_u)
-            ) {
-                $message = 'Accès refusé : cette adresse IP est bloquée.';
+            } elseif ($ip_c !== "" && cyj_ip_is_banned($pdo, $ip_c) && !cyj_ip_ban_skipped_for_role($role_u)) {
+                $message = "Accès refusé : cette adresse IP est bloquée.";
             } else {
-                $_SESSION['nom_utilisateur'] = $user_data['username'];
-                $_SESSION['role'] = $user_data['role'];
-                $_SESSION['yumland'] = (bool) $user_data['yumland'];
+                cyj_session_login_reset();
+                $_SESSION["nom_utilisateur"] = $user_data["username"];
+                $_SESSION["role"] = $user_data["role"];
+                $_SESSION["yumland"] = (bool) $user_data["yumland"];
                 if ($uid > 0) {
-                    $_SESSION['user_id'] = $uid;
+                    $_SESSION["user_id"] = $uid;
                     cyj_touch_last_login_ip($pdo, $uid, $ip_c);
                 }
                 header("Location: ../../index.php");
-                exit;
+                exit();
             }
         } else {
             $message = "Identifiants incorrects.";
         }
     }
 
-    if (isset($_POST['google_token'])) {
-        $token = $_POST['google_token'];
-        
+    if (isset($_POST["google_token"])) {
+        $token = $_POST["google_token"];
+
         $url = "https://oauth2.googleapis.com/tokeninfo?id_token=" . $token;
         $response = file_get_contents($url);
         $data = json_decode($response, true);
 
-        if (isset($data['email'])) {
-            $email = $data['email'];
-            $google_id = $data['sub'];
-            $name = $data['name'];
+        if (isset($data["email"])) {
+            $email = $data["email"];
+            $google_id = $data["sub"];
+            $name = $data["name"];
 
             $stmt = $pdo->prepare("SELECT * FROM users WHERE email = ?");
             $stmt->execute([$email]);
@@ -74,30 +73,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if (!$user || !is_array($user)) {
                 echo "invalid_token";
-                exit;
+                exit();
             }
 
-            $uid_google = (int) ($user['id'] ?? 0);
+            $uid_google = (int) ($user["id"] ?? 0);
             if ($uid_google > 0 && cyj_user_has_active_block($pdo, $uid_google)) {
                 echo "blocked";
-                exit;
+                exit();
             }
-            $role_g = (string) ($user['role'] ?? 'colab.');
+            $role_g = (string) ($user["role"] ?? "colab.");
             $ip_g = cyj_client_ip();
-            if (
-                $ip_g !== ''
-                && cyj_ip_is_banned($pdo, $ip_g)
-                && !cyj_ip_ban_skipped_for_role($role_g)
-            ) {
+            if ($ip_g !== "" && cyj_ip_is_banned($pdo, $ip_g) && !cyj_ip_ban_skipped_for_role($role_g)) {
                 echo "ip_blocked";
-                exit;
+                exit();
             }
 
-            $_SESSION['nom_utilisateur'] = $user['username'] ?? $name;
-            $_SESSION['role'] = $role_g;
-            $_SESSION['yumland'] = $user ? (bool) $user['yumland'] : false;
+            cyj_session_login_reset();
+            $_SESSION["nom_utilisateur"] = $user["username"] ?? $name;
+            $_SESSION["role"] = $role_g;
+            $_SESSION["yumland"] = $user ? (bool) $user["yumland"] : false;
             if ($uid_google > 0) {
-                $_SESSION['user_id'] = $uid_google;
+                $_SESSION["user_id"] = $uid_google;
                 cyj_touch_last_login_ip($pdo, $uid_google, $ip_g);
             }
 
@@ -105,7 +101,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             echo "invalid_token";
         }
-        exit; 
+        exit();
     }
 }
 ?>

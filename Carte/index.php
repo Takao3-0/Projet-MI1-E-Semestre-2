@@ -1,228 +1,333 @@
-<?php 
+<?php
 
-$BASE = preg_replace('#(/(?:Admin|Carte|Cuisinier|LOG|Livraison|Notation|Profil|Sujet|CYBank)(?:/.*)?)?/[^/]*$#', '', $_SERVER['SCRIPT_NAME']);
-    require_once '../../../protection.php';
+$BASE = preg_replace(
+    '#(/(?:Admin|Carte|Cuisinier|LOG|Livraison|Notation|Profil|Sujet|CYBank)(?:/.*)?)?/[^/]*$#',
+    "",
+    $_SERVER["SCRIPT_NAME"],
+);
+require_once "../../../protection.php";
 
-    require_once '../../../../db_config_yumland.php';
-    //On recupere les itemps depuis la database (table articles)
+require_once "../../../../db_config_yumland.php";
+//On recupere les itemps depuis la database (table articles)
 
-    $stmt = $pdo->prepare("SELECT * FROM articles");
-    $stmt->execute();
-    $articles = $stmt->fetchAll();
+$stmt = $pdo->prepare("SELECT * FROM articles");
+$stmt->execute();
+$articles = $stmt->fetchAll();
 
-    $stmt = $pdo->prepare("SELECT * FROM menus");
-    $stmt->execute();
-    $menus = $stmt->fetchAll();
+$stmt = $pdo->prepare("SELECT * FROM menus");
+$stmt->execute();
+$menus = $stmt->fetchAll();
 
-    $stmt = $pdo->prepare("SELECT * FROM composition_menu");
-    $stmt->execute();
-    $composition_menu = $stmt->fetchAll();
+$stmt = $pdo->prepare("SELECT * FROM composition_menu");
+$stmt->execute();
+$composition_menu = $stmt->fetchAll();
 
-
-    // Catalogue indexé par code produit (même clés que l’ancien JSON, données = table articles) 
-    $catalog = [];
-    $type_post_labels = [
-        'menu' => 'Menu',
-        'burger' => 'Burger',
-        'pizza' => 'Pizza',
-        'wrap' => 'Wrap / Tacos',
-        'side' => 'Accompagnement',
-        'dessert' => 'Dessert',
-        'boisson' => 'Boisson',
+// Catalogue indexé par code produit (même clés que l’ancien JSON, données = table articles)
+$catalog = [];
+$type_post_labels = [
+    "menu" => "Menu",
+    "burger" => "Burger",
+    "pizza" => "Pizza",
+    "wrap" => "Wrap / Tacos",
+    "side" => "Accompagnement",
+    "dessert" => "Dessert",
+    "boisson" => "Boisson",
+];
+foreach ($articles as $article_row) {
+    $row = array_change_key_case($article_row, CASE_LOWER);
+    $id = (int) ($row["code"] ?? ($row["id"] ?? 0));
+    if ($id <= 0) {
+        continue;
+    }
+    $post = strtolower(trim((string) ($row["type_post"] ?? "")));
+    $prix_raw = str_replace(",", ".", (string) ($row["prix"] ?? "0"));
+    $cat_label =
+        isset($row["categorie"]) && $row["categorie"] !== ""
+            ? (string) $row["categorie"]
+            : $type_post_labels[$post] ?? ucfirst($post);
+    $catalog[$id] = [
+        "name" => (string) ($row["nom"] ?? ""),
+        "price" => (float) $prix_raw,
+        "cat" => $cat_label,
+        "post" => $post,
     ];
-    foreach ($articles as $article_row) {
-        $row = array_change_key_case($article_row, CASE_LOWER);
-        $id = (int) ($row['code'] ?? $row['id'] ?? 0);
-        if ($id <= 0) {
+}
+
+/* Menus (table menus) : clés négatives dans le catalogue pour ne jamais entrer en conflit avec les codes articles (> 0). */
+foreach ($menus as $menu_row) {
+    $m = array_change_key_case($menu_row, CASE_LOWER);
+    $mid = (int) ($m["id"] ?? 0);
+    if ($mid <= 0) {
+        continue;
+    }
+    $catKey = -$mid;
+    $nom_menu = (string) ($m["nom_menu"] ?? ($m["nom"] ?? "Menu"));
+    $prix_menu = str_replace(",", ".", (string) ($m["prix"] ?? "0"));
+    $catalog[$catKey] = [
+        "name" => $nom_menu,
+        "price" => (float) $prix_menu,
+        "cat" => "Menu",
+        "post" => "menu",
+    ];
+}
+
+// Initialisation session
+if (!isset($_SESSION["panier"])) {
+    $_SESSION["panier"] = [
+        "menus" => [],
+        "burgers" => [],
+        "pizzas" => [],
+        "wraps" => [],
+        "sides" => [],
+        "desserts" => [],
+        "boissons" => [],
+    ];
+}
+
+$base_url = strtok($_SERVER["REQUEST_URI"], "?") . "?cart=open";
+
+// Ajout depuis les cartes menu
+$add_keys = ["menu", "burger", "pizza", "wrap", "side", "dessert", "boisson"];
+foreach ($add_keys as $cat) {
+    if (isset($_POST["add_" . $cat])) {
+        if ($cat === "menu") {
+            $id = (int) $_POST["add_menu"];
+            if ($id < 0 && isset($catalog[$id])) {
+                $key = "menus";
+                $_SESSION["panier"][$key][$id] = ($_SESSION["panier"][$key][$id] ?? 0) + 1;
+            }
+            header("Location: " . $base_url . "#menus");
+            exit();
+        }
+        $id = (int) $_POST["add_" . $cat];
+        if ($id > 0) {
+            $key = $cat . "s";
+            $_SESSION["panier"][$key][$id] = ($_SESSION["panier"][$key][$id] ?? 0) + 1;
+        }
+        header("Location: " . $base_url . "#" . $cat . "s");
+        exit();
+    }
+}
+
+// Actions depuis le panneau panier (redirect avec ?cart=open)
+
+// Ajouter un article depuis le panier
+foreach ($add_keys as $cat) {
+    if (isset($_POST["cart_add_" . $cat])) {
+        $id = (int) $_POST["cart_add_" . $cat];
+        if ($cat === "menu") {
+            if ($id < 0 && isset($catalog[$id])) {
+                $_SESSION["panier"]["menus"][$id] = ($_SESSION["panier"]["menus"][$id] ?? 0) + 1;
+            }
+        } elseif ($id > 0) {
+            $key = $cat . "s";
+            $_SESSION["panier"][$key][$id] = ($_SESSION["panier"][$key][$id] ?? 0) + 1;
+        }
+        header("Location: " . $base_url);
+        exit();
+    }
+}
+
+// Retirer une unité
+if (isset($_POST["cart_remove"])) {
+    $id = (int) $_POST["cart_remove"];
+    foreach ($_SESSION["panier"] as $key => &$items) {
+        if (isset($items[$id])) {
+            $items[$id]--;
+            if ($items[$id] <= 0) {
+                unset($items[$id]);
+            }
+            break;
+        }
+    }
+    unset($items);
+    header("Location: " . $base_url);
+    exit();
+}
+
+// Supprimer un article entièrement
+if (isset($_POST["cart_delete"])) {
+    $id = (int) $_POST["cart_delete"];
+    foreach ($_SESSION["panier"] as $key => &$items) {
+        if (isset($items[$id])) {
+            unset($items[$id]);
+            break;
+        }
+    }
+    unset($items);
+    header("Location: " . $base_url);
+    exit();
+}
+
+// Vider le panier
+if (isset($_POST["cart_clear"])) {
+    foreach ($_SESSION["panier"] as $key => $_) {
+        $_SESSION["panier"][$key] = [];
+    }
+    header("Location: " . $base_url);
+    exit();
+}
+
+// Calcul du total et liste à afficher
+$panier_count = 0;
+$panier_total = 0.0;
+$panier_items = [];
+
+foreach ($_SESSION["panier"] as $items) {
+    foreach ($items as $id => $qty) {
+        if ($qty <= 0 || !isset($catalog[$id])) {
             continue;
         }
-        $post = strtolower(trim((string) ($row['type_post'] ?? '')));
-        $prix_raw = str_replace(',', '.', (string) ($row['prix'] ?? '0'));
-        $cat_label = (isset($row['categorie']) && $row['categorie'] !== '')
-            ? (string) $row['categorie']
-            : ($type_post_labels[$post] ?? ucfirst($post));
-        $catalog[$id] = [
-            'name' => (string) ($row['nom'] ?? ''),
-            'price' => (float) $prix_raw,
-            'cat' => $cat_label,
-            'post' => $post,
+        $item = $catalog[$id];
+        $panier_count += $qty;
+        $panier_total += $item["price"] * $qty;
+        $panier_items[] = [
+            "id" => $id,
+            "qty" => $qty,
+            "name" => $item["name"],
+            "price" => $item["price"],
+            "cat" => $item["cat"],
+            "post" => $item["post"],
+            "subtotal" => $item["price"] * $qty,
         ];
     }
+}
 
-    /* Menus (table menus) : clés négatives dans le catalogue pour ne jamais entrer en conflit avec les codes articles (> 0). */
-    foreach ($menus as $menu_row) {
-        $m = array_change_key_case($menu_row, CASE_LOWER);
-        $mid = (int) ($m['id'] ?? 0);
-        if ($mid <= 0) {
-            continue;
-        }
-        $catKey = -$mid;
-        $nom_menu = (string) ($m['nom_menu'] ?? $m['nom'] ?? 'Menu');
-        $prix_menu = str_replace(',', '.', (string) ($m['prix'] ?? '0'));
-        $catalog[$catKey] = [
-            'name' => $nom_menu,
-            'price' => (float) $prix_menu,
-            'cat' => 'Menu',
-            'post' => 'menu',
-        ];
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["action"]) && $_POST["action"] === "ajax_filter") {
+    $regime = $_POST["regime"] ?? "tous";
+
+    if ($regime === "tous") {
+        echo "reload";
+        exit();
     }
 
-    // Initialisation session 
-    if (!isset($_SESSION['panier'])) {
-        $_SESSION['panier'] = [
-            'menus'    => [],
-            'burgers'  => [],
-            'pizzas'   => [],
-            'wraps'    => [],
-            'sides'    => [],
-            'desserts' => [],
-            'boissons' => [],
-        ];
-    }
+    $stmt_filter = $pdo->prepare("SELECT * FROM articles WHERE description LIKE ? OR nom LIKE ?");
+    $stmt_filter->execute(["%$regime%", "%$regime%"]);
+    $filtered_articles = $stmt_filter->fetchAll();
 
-    $base_url = strtok($_SERVER['REQUEST_URI'], '?') . '?cart=open';
-
-    // Ajout depuis les cartes menu
-    $add_keys = ['menu', 'burger', 'pizza', 'wrap', 'side', 'dessert', 'boisson'];
-    foreach ($add_keys as $cat) {
-        if (isset($_POST['add_' . $cat])) {
-            if ($cat === 'menu') {
-                $id = (int) $_POST['add_menu'];
-                if ($id < 0 && isset($catalog[$id])) {
-                    $key = 'menus';
-                    $_SESSION['panier'][$key][$id] = ($_SESSION['panier'][$key][$id] ?? 0) + 1;
-                }
-                header('Location: ' . $base_url . '#menus');
-                exit;
-            }
-            $id = (int) $_POST['add_' . $cat];
-            if ($id > 0) {
-                $key = $cat . 's';
-                $_SESSION['panier'][$key][$id] = ($_SESSION['panier'][$key][$id] ?? 0) + 1;
-            }
-            header('Location: ' . $base_url . '#' . $cat . 's');
-            exit;
-        }
-    }
-
-    // Actions depuis le panneau panier (redirect avec ?cart=open)
-
-    // Ajouter un article depuis le panier
-    foreach ($add_keys as $cat) {
-        if (isset($_POST['cart_add_' . $cat])) {
-            $id = (int) $_POST['cart_add_' . $cat];
-            if ($cat === 'menu') {
-                if ($id < 0 && isset($catalog[$id])) {
-                    $_SESSION['panier']['menus'][$id] = ($_SESSION['panier']['menus'][$id] ?? 0) + 1;
-                }
-            } elseif ($id > 0) {
-                $key = $cat . 's';
-                $_SESSION['panier'][$key][$id] = ($_SESSION['panier'][$key][$id] ?? 0) + 1;
-            }
-            header('Location: ' . $base_url);
-            exit;
-        }
-    }
-
-    // Retirer une unité
-    if (isset($_POST['cart_remove'])) {
-        $id = (int) $_POST['cart_remove'];
-        foreach ($_SESSION['panier'] as $key => &$items) {
-            if (isset($items[$id])) {
-                $items[$id]--;
-                if ($items[$id] <= 0) unset($items[$id]);
-                break;
-            }
-        }
-        unset($items);
-        header('Location: ' . $base_url);
-        exit;
-    }
-
-    // Supprimer un article entièrement
-    if (isset($_POST['cart_delete'])) {
-        $id = (int) $_POST['cart_delete'];
-        foreach ($_SESSION['panier'] as $key => &$items) {
-            if (isset($items[$id])) { unset($items[$id]); break; }
-        }
-        unset($items);
-        header('Location: ' . $base_url);
-        exit;
-    }
-
-    // Vider le panier
-    if (isset($_POST['cart_clear'])) {
-        foreach ($_SESSION['panier'] as $key => $_) {
-            $_SESSION['panier'][$key] = [];
-        }
-        header('Location: ' . $base_url);
-        exit;
-    }
-
-
-
-    // Calcul du total et liste à afficher 
-    $panier_count = 0;
-    $panier_total = 0.0;
-    $panier_items = [];
-
-    foreach ($_SESSION['panier'] as $items) {
-        foreach ($items as $id => $qty) {
-            if ($qty <= 0 || !isset($catalog[$id])) continue;
-            $item = $catalog[$id];
-            $panier_count += $qty;
-            $panier_total += $item['price'] * $qty;
-            $panier_items[] = [
-                'id'       => $id,
-                'qty'      => $qty,
-                'name'     => $item['name'],
-                'price'    => $item['price'],
-                'cat'      => $item['cat'],
-                'post'     => $item['post'],
-                'subtotal' => $item['price'] * $qty,
-            ];
-        }
-    }
-
-    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'ajax_filter') {
-        $regime = $_POST['regime'] ?? 'tous';
-        
-        if ($regime === 'tous') {
-            echo "reload";
-            exit;
-        }
-
-        $stmt_filter = $pdo->prepare("SELECT * FROM articles WHERE description LIKE ? OR nom LIKE ?");
-        $stmt_filter->execute(["%$regime%", "%$regime%"]);
-        $filtered_articles = $stmt_filter->fetchAll();
-
-        if (empty($filtered_articles)) {
-            echo '<p style="color:var(--orange); text-align:center; width:100%; font-weight:bold; padding:2rem;">Aucun article ne correspond à ce critère.</p>';
-        } else {
-            foreach ($filtered_articles as $article) {
-                $prix_clean = str_replace(',', '.', (string)$article['prix']);
-                echo '
-                <div class="menu-card" data-price="' . (float)$prix_clean . '" data-sales="' . ($article['code'] % 7) . '">
+    if (empty($filtered_articles)) {
+        echo '<p style="color:var(--orange); text-align:center; width:100%; font-weight:bold; padding:2rem;">Aucun article ne correspond à ce critère.</p>';
+    } else {
+        foreach ($filtered_articles as $article) {
+            $prix_clean = str_replace(",", ".", (string) $article["prix"]);
+            echo '
+                <div class="menu-card" data-price="' .
+                (float) $prix_clean .
+                '" data-sales="' .
+                $article["code"] % 7 .
+                '">
                     <div class="menu-card-img" style="background: linear-gradient(135deg,#FFE0B2,#FFB74D)">
                         <span class="menu-emoji">&#127828;</span>
                     </div>
                     <div class="menu-card-body">
-                        <span class="menu-cat">' . htmlspecialchars(ucfirst($article['type_post'])) . '</span>
-                        <h3>' . htmlspecialchars($article['nom']) . '</h3>
-                        <p>' . htmlspecialchars($article['description']) . '</p>
+                        <span class="menu-cat">' .
+                htmlspecialchars(ucfirst($article["type_post"])) .
+                '</span>
+                        <h3>' .
+                htmlspecialchars($article["nom"]) .
+                '</h3>
+                        <p>' .
+                htmlspecialchars($article["description"]) .
+                '</p>
                         <div class="menu-card-footer">
-                            <span class="menu-price">' . $article['prix'] . ' &euro;</span>
+                            <span class="menu-price">' .
+                $article["prix"] .
+                ' &euro;</span>
                             <form method="POST" action="index.php">
-                                <button type="submit" name="add_' . htmlspecialchars($article['type_post']) . '" value="' . $article['code'] . '" class="menu-add">+</button>
+                                <button type="submit" name="add_' .
+                htmlspecialchars($article["type_post"]) .
+                '" value="' .
+                $article["code"] .
+                '" class="menu-add">+</button>
                             </form>
                         </div>
                     </div>
                 </div>';
-            }
         }
-        exit;
     }
+    exit();
+}
 
+// metadonnees par categorie : emoji, degrade de fond et libelle affiche
+// ca evite de repeter ces infos dans le html, et la fonction juste en dessous s'en sert
+$CARTE_CATEGORIES = [
+    "burger" => ["emoji" => "&#127828;", "fond" => "135deg,#FFE0B2,#FFB74D", "label" => "Burger"],
+    "pizza" => ["emoji" => "&#127829;", "fond" => "135deg,#FCE4EC,#F48FB1", "label" => "Pizza"],
+    "wrap" => ["emoji" => "&#127790;", "fond" => "135deg,#E8F5E9,#A5D6A7", "label" => "Wrap"],
+    "side" => ["emoji" => "&#127839;", "fond" => "135deg,#FFF3E0,#FFCC80", "label" => "Accompagnements"],
+    "dessert" => ["emoji" => "&#127846;", "fond" => "135deg,#FCE4EC,#F48FB1", "label" => "Dessert"],
+    "boisson" => ["emoji" => "&#129380;", "fond" => "135deg,#E3F2FD,#90CAF9", "label" => "Boisson"],
+];
+
+// affiche UNE carte produit. On appelle cette fonction dans chaque section :
+// comme ca le pave html d'une carte n'existe qu'ici, une seule fois, au lieu d'etre recopie partout.
+function carte_afficher_article($article, $categories)
+{
+    $post = strtolower(trim((string) ($article["type_post"] ?? "")));
+    // si la categorie n'est pas connue, on met un style neutre par defaut
+    $meta = $categories[$post] ?? [
+        "emoji" => "&#127860;",
+        "fond" => "135deg,#eeeeee,#cccccc",
+        "label" => ucfirst($post),
+    ];
+    $code = (int) ($article["code"] ?? 0);
+    $prix_num = (float) str_replace(",", ".", (string) ($article["prix"] ?? "0"));
+    ?>
+        <div class="menu-card" data-price="<?php echo $prix_num; ?>" data-sales="<?php echo $code % 7; ?>">
+            <div class="menu-card-img" style="background: linear-gradient(<?php echo $meta["fond"]; ?>)">
+                <span class="menu-emoji"><?php echo $meta["emoji"]; ?></span>
+            </div>
+            <div class="menu-card-body">
+                <span class="menu-cat"><?php echo htmlspecialchars($meta["label"]); ?></span>
+                <h3><?php echo htmlspecialchars((string) ($article["nom"] ?? "")); ?></h3>
+                <p><?php echo htmlspecialchars((string) ($article["description"] ?? "")); ?></p>
+                <div class="menu-card-footer">
+                    <span class="menu-price"><?php echo htmlspecialchars(
+                        (string) ($article["prix"] ?? ""),
+                    ); ?> &euro;</span>
+                    <form method="POST" action="index.php">
+                        <button type="submit" name="add_<?php echo $post; ?>" value="<?php echo $code; ?>" class="menu-add">+</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <?php
+}
+
+// section "populaires" : les articles les plus commandes, calcules depuis les vraies commandes
+// on indexe d'abord les articles par leur code pour les retrouver vite
+$articles_par_code = [];
+foreach ($articles as $art_row) {
+    $ar = array_change_key_case($art_row, CASE_LOWER);
+    $c = (int) ($ar["code"] ?? 0);
+    if ($c > 0) {
+        $articles_par_code[$c] = $art_row;
+    }
+}
+// on demande a la base quels produits ont ete le plus commandes (somme des quantites vendues)
+$populaires = [];
+try {
+    $stmt_pop = $pdo->prepare(
+        "SELECT produit_id, SUM(quantite) AS total_vendu
+               FROM commande_items
+              GROUP BY produit_id
+              ORDER BY total_vendu DESC
+              LIMIT 8",
+    );
+    $stmt_pop->execute();
+    foreach ($stmt_pop->fetchAll() as $ligne_pop) {
+        $pid = (int) ($ligne_pop["produit_id"] ?? 0);
+        if (isset($articles_par_code[$pid])) {
+            $populaires[] = $articles_par_code[$pid];
+        }
+    }
+} catch (Throwable $e) {
+    $populaires = [];
+}
+// si le site est encore neuf (pas assez de ventes), on affiche simplement les premiers articles
+if (count($populaires) < 4) {
+    $populaires = array_slice($articles, 0, 8);
+}
 ?>
 
 
@@ -279,7 +384,6 @@ $BASE = preg_replace('#(/(?:Admin|Carte|Cuisinier|LOG|Livraison|Notation|Profil|
             }
         }
 
-
         .cart-icon-wrap {
             position: relative;
             display: inline-flex;
@@ -315,7 +419,7 @@ $BASE = preg_replace('#(/(?:Admin|Carte|Cuisinier|LOG|Livraison|Notation|Profil|
             justify-content: center;
             line-height: 1;
             padding: 0 2px;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
             pointer-events: none;
         }
 
@@ -332,7 +436,7 @@ $BASE = preg_replace('#(/(?:Admin|Carte|Cuisinier|LOG|Livraison|Notation|Profil|
         }
 
         #cartContainer::before {
-            content: '';
+            content: "";
             position: absolute;
             inset: 0;
             background: rgba(0, 0, 0, 0);
@@ -395,7 +499,9 @@ $BASE = preg_replace('#(/(?:Admin|Carte|Cuisinier|LOG|Livraison|Notation|Profil|
             transition: background var(--transition);
         }
 
-        .cart-close-btn:hover { background: #f0f0f0; }
+        .cart-close-btn:hover {
+            background: #f0f0f0;
+        }
 
         .cart-panel-body {
             flex: 1;
@@ -452,7 +558,9 @@ $BASE = preg_replace('#(/(?:Admin|Carte|Cuisinier|LOG|Livraison|Notation|Profil|
             gap: 0.3rem;
         }
 
-        .cart-item-controls form { margin: 0; }
+        .cart-item-controls form {
+            margin: 0;
+        }
 
         .cart-qty-btn {
             width: 26px;
@@ -467,13 +575,26 @@ $BASE = preg_replace('#(/(?:Admin|Carte|Cuisinier|LOG|Livraison|Notation|Profil|
             align-items: center;
             justify-content: center;
             line-height: 1;
-            transition: background var(--transition), border-color var(--transition);
+            transition:
+                background var(--transition),
+                border-color var(--transition);
         }
 
-        .cart-qty-btn:hover { background: var(--orange); border-color: var(--orange); color: #fff; }
+        .cart-qty-btn:hover {
+            background: var(--orange);
+            border-color: var(--orange);
+            color: #fff;
+        }
 
-        .cart-qty-btn.delete { border-color: #ffcdd2; color: #e53935; }
-        .cart-qty-btn.delete:hover { background: #e53935; border-color: #e53935; color: #fff; }
+        .cart-qty-btn.delete {
+            border-color: #ffcdd2;
+            color: #e53935;
+        }
+        .cart-qty-btn.delete:hover {
+            background: #e53935;
+            border-color: #e53935;
+            color: #fff;
+        }
 
         .cart-qty-num {
             min-width: 22px;
@@ -493,7 +614,10 @@ $BASE = preg_replace('#(/(?:Admin|Carte|Cuisinier|LOG|Livraison|Notation|Profil|
             padding: 2rem;
         }
 
-        .cart-empty-icon { font-size: 3rem; opacity: 0.4; }
+        .cart-empty-icon {
+            font-size: 3rem;
+            opacity: 0.4;
+        }
 
         .cart-panel-footer {
             padding: 1.2rem 1.5rem;
@@ -510,7 +634,10 @@ $BASE = preg_replace('#(/(?:Admin|Carte|Cuisinier|LOG|Livraison|Notation|Profil|
             margin-bottom: 1rem;
         }
 
-        .cart-total-label { font-size: 0.9rem; color: var(--grey-text); }
+        .cart-total-label {
+            font-size: 0.9rem;
+            color: var(--grey-text);
+        }
 
         .cart-total-amount {
             font-size: 1.3rem;
@@ -536,7 +663,9 @@ $BASE = preg_replace('#(/(?:Admin|Carte|Cuisinier|LOG|Livraison|Notation|Profil|
             transition: background var(--transition);
         }
 
-        .btn-commander:hover { background: var(--orange-dk); }
+        .btn-commander:hover {
+            background: var(--orange-dk);
+        }
 
         .btn-vider {
             padding: 0.75rem 1rem;
@@ -550,7 +679,10 @@ $BASE = preg_replace('#(/(?:Admin|Carte|Cuisinier|LOG|Livraison|Notation|Profil|
             transition: all var(--transition);
         }
 
-        .btn-vider:hover { border-color: #e53935; color: #e53935; }
+        .btn-vider:hover {
+            border-color: #e53935;
+            color: #e53935;
+        }
 
         /* Sous-navigation carte : même ADN que la navbar (accueil.css : --dark / --orange) */
         .restaurant-content .sticky-nav {
@@ -594,7 +726,10 @@ $BASE = preg_replace('#(/(?:Admin|Carte|Cuisinier|LOG|Livraison|Notation|Profil|
             text-decoration: none;
             color: rgba(255, 255, 255, 0.78);
             border: 1px solid transparent;
-            transition: color var(--transition), background var(--transition), border-color var(--transition);
+            transition:
+                color var(--transition),
+                background var(--transition),
+                border-color var(--transition);
         }
 
         .restaurant-content .sticky-nav a.sticky-nav-link:hover {
@@ -745,7 +880,7 @@ $BASE = preg_replace('#(/(?:Admin|Carte|Cuisinier|LOG|Livraison|Notation|Profil|
         <span class="mainMenuItemCollapsable">Cy Restaurant</span>
       </div>
 
-      <?php if (!($est_connecte)): ?>
+      <?php if (!$est_connecte): ?>
         <nav id="menuNav">
           <div class="mainMenuItemLogin">
             <a href="<?= $BASE ?>/LOG/login">
@@ -886,14 +1021,14 @@ $BASE = preg_replace('#(/(?:Admin|Carte|Cuisinier|LOG|Livraison|Notation|Profil|
                         </div>
                         <div class="menu-card-body">
                             <span class="menu-cat">Menu</span>
-                            <h3><?php echo $menu['nom_menu']; ?></h3>
-                            <p><?php echo $menu['description']; ?></p>
+                            <h3><?php echo $menu["nom_menu"]; ?></h3>
+                            <p><?php echo $menu["description"]; ?></p>
                             <div class="menu-card-footer">
-                                <span class="menu-price"><?php echo $menu['prix']; ?> &euro;</span>
+                                <span class="menu-price"><?php echo $menu["prix"]; ?> &euro;</span>
                                 <form method="POST" action="index.php">
                                     <?php
                                     $menu_row = array_change_key_case($menu, CASE_LOWER);
-                                    $menu_id_cart = (int) ($menu_row['id'] ?? 0);
+                                    $menu_id_cart = (int) ($menu_row["id"] ?? 0);
                                     $menu_id_cart = $menu_id_cart > 0 ? -$menu_id_cart : 0;
                                     ?>
                                     <button type="submit" name="add_menu" value="<?php echo $menu_id_cart; ?>" class="menu-add">+</button>
@@ -909,177 +1044,13 @@ $BASE = preg_replace('#(/(?:Admin|Carte|Cuisinier|LOG|Livraison|Notation|Profil|
                 <p>Les plats pr&eacute;f&eacute;r&eacute;s de nos clients, disponibles tous les jours.</p>
             </div>
 
+            <?php
+// ces cartes sont calculees depuis les vraies ventes (voir $populaires plus haut), elles ne sont plus ecrites en dur
+?>
             <div class="menu-grid">
-
-                <div class="menu-card">
-                    <div class="menu-card-img" style="background: linear-gradient(135deg,#fff3e0,#ffe0b2)">
-                        <span class="menu-emoji">&#127828;</span>
-                    </div>
-                    <div class="menu-card-body">
-                        <span class="menu-cat">Burger</span>
-                        <h3>CY Smash Burger</h3>
-                        <p>Double steak, cheddar, sauce maison</p>
-                        <div class="menu-card-footer">
-                            <span class="menu-price">8.90 &euro;</span>
-                            <form method="POST">
-                                <button type="submit" name="add_burger" value="1001" class="menu-add">+</button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="menu-card">
-                    <div class="menu-card-img" style="background: linear-gradient(135deg,#fce4ec,#f8bbd0)">
-                        <span class="menu-emoji">&#127829;</span>
-                    </div>
-                    <div class="menu-card-body">
-                        <span class="menu-cat">Pizza</span>
-                        <h3>Pizza 4 Fromages</h3>
-                        <p>Mozzarella, gorgonzola, ch&egrave;vre, parmesan</p>
-                        <div class="menu-card-footer">
-                            <span class="menu-price">11.00 &euro;</span>
-                            <form method="POST">
-                                <button type="submit" name="add_pizza" value="1102" class="menu-add">+</button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="menu-card">
-                    <div class="menu-card-img" style="background: linear-gradient(135deg,#e8f5e9,#c8e6c9)">
-                        <span class="menu-emoji">&#127790;</span>
-                    </div>
-                    <div class="menu-card-body">
-                        <span class="menu-cat">Wrap</span>
-                        <h3>Wrap Poulet Avocat</h3>
-                        <p>Poulet grill&eacute;, avocat, sauce ranch</p>
-                        <div class="menu-card-footer">
-                            <span class="menu-price">7.50 &euro;</span>
-                            <form method="POST">
-                                <button type="submit" name="add_wrap" value="1201" class="menu-add">+</button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="menu-card">
-                    <div class="menu-card-img" style="background: linear-gradient(135deg,#fff3e0,#ffccbc)">
-                        <span class="menu-emoji">&#127828;</span>
-                    </div>
-                    <div class="menu-card-body">
-                        <span class="menu-cat">Burger</span>
-                        <h3>Bacon King</h3>
-                        <p>Triple steak, bacon grill&eacute;, cheddar, BBQ</p>
-                        <div class="menu-card-footer">
-                            <span class="menu-price">11.90 &euro;</span>
-                            <form method="POST">
-                                <button type="submit" name="add_burger" value="1005" class="menu-add">+</button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="menu-card">
-                    <div class="menu-card-img" style="background: linear-gradient(135deg,#fff9c4,#fff176)">
-                        <span class="menu-emoji">&#127839;</span>
-                    </div>
-                    <div class="menu-card-body">
-                        <span class="menu-cat">Accompagnements</span>
-                        <h3>Nuggets x8</h3>
-                        <p>Croustillants avec sauce au choix</p>
-                        <div class="menu-card-footer">
-                            <span class="menu-price">5.90 &euro;</span>
-                            <form method="POST">
-                                <button type="submit" name="add_side" value="1302" class="menu-add">+</button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="menu-card">
-                    <div class="menu-card-img" style="background: linear-gradient(135deg,#e8f5e9,#a5d6a7)">
-                        <span class="menu-emoji">&#127790;</span>
-                    </div>
-                    <div class="menu-card-body">
-                        <span class="menu-cat">Tacos</span>
-                        <h3>Tacos XL</h3>
-                        <p>Double viande, double fromage, frites</p>
-                        <div class="menu-card-footer">
-                            <span class="menu-price">10.90 &euro;</span>
-                            <form method="POST">
-                                <button type="submit" name="add_wrap" value="1203" class="menu-add">+</button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="menu-card">
-                    <div class="menu-card-img" style="background: linear-gradient(135deg,#fce4ec,#f48fb1)">
-                        <span class="menu-emoji">&#127846;</span>
-                    </div>
-                    <div class="menu-card-body">
-                        <span class="menu-cat">Dessert</span>
-                        <h3>Cookie G&eacute;ant</h3>
-                        <p>P&eacute;pites de chocolat, tout chaud</p>
-                        <div class="menu-card-footer">
-                            <span class="menu-price">2.90 &euro;</span>
-                            <form method="POST">
-                                <button type="submit" name="add_dessert" value="1401" class="menu-add">+</button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="menu-card">
-                    <div class="menu-card-img" style="background: linear-gradient(135deg,#ffebee,#ef9a9a)">
-                        <span class="menu-emoji">&#127829;</span>
-                    </div>
-                    <div class="menu-card-body">
-                        <span class="menu-cat">Pizza</span>
-                        <h3>Pizza Pepperoni</h3>
-                        <p>Sauce tomate, mozzarella, pepperoni</p>
-                        <div class="menu-card-footer">
-                            <span class="menu-price">10.50 &euro;</span>
-                            <form method="POST">
-                                <button type="submit" name="add_pizza" value="1103" class="menu-add">+</button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="menu-card">
-                    <div class="menu-card-img" style="background: linear-gradient(135deg,#e3f2fd,#90caf9)">
-                        <span class="menu-emoji">&#129380;</span>
-                    </div>
-                    <div class="menu-card-body">
-                        <span class="menu-cat">Boisson</span>
-                        <h3>Jus d'Orange Frais</h3>
-                        <p>Press&eacute; sur place, 100% pur jus</p>
-                        <div class="menu-card-footer">
-                            <span class="menu-price">3.50 &euro;</span>
-                            <form method="POST">
-                                <button type="submit" name="add_boisson" value="1503" class="menu-add">+</button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="menu-card">
-                    <div class="menu-card-img" style="background: linear-gradient(135deg,#fff9c4,#ffee58)">
-                        <span class="menu-emoji">&#127839;</span>
-                    </div>
-                    <div class="menu-card-body">
-                        <span class="menu-cat">Accompagnements</span>
-                        <h3>Frites Maison</h3>
-                        <p>Fra&icirc;ches, sel de Gu&eacute;rande</p>
-                        <div class="menu-card-footer">
-                            <span class="menu-price">3.50 &euro;</span>
-                            <form method="POST">
-                                <button type="submit" name="add_side" value="1301" class="menu-add">+</button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
+                <?php foreach ($populaires as $article): ?>
+                    <?php carte_afficher_article($article, $CARTE_CATEGORIES); ?>
+                <?php endforeach; ?>
             </div><br>
             <!-- Burgers -->
             <div class="section-header" id="burgers">
@@ -1089,24 +1060,9 @@ $BASE = preg_replace('#(/(?:Admin|Carte|Cuisinier|LOG|Livraison|Notation|Profil|
             <div class="menu-grid">
 
                 <?php foreach ($articles as $article): ?>
-                    <?php if ($article['type_post'] == 'burger'): ?>
-                        <div class="menu-card" data-price="<?php echo (float)str_replace(',', '.', $article['prix']); ?>" data-sales="<?php echo ($article['code'] % 7); ?>">
-                            <div class="menu-card-img" style="background: linear-gradient(135deg,#FFE0B2,#FFB74D)">
-                                <span class="menu-emoji">&#127828;</span>
-                            </div>
-                            <div class="menu-card-body">
-                                <span class="menu-cat">Burger</span>
-                                <h3><?php echo $article['nom']; ?></h3>
-                                <p><?php echo $article['description']; ?></p>
-                                <div class="menu-card-footer">
-                                    <span class="menu-price"><?php echo $article['prix']; ?> &euro;</span>
-                                    <form method="POST" action="index.php">
-                                        <button type="submit" name="add_burger" value="<?php echo $article['code']; ?>" class="menu-add">+</button>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
-                    <?php endif; ?>
+                    <?php if ($article["type_post"] == "burger") {
+                        carte_afficher_article($article, $CARTE_CATEGORIES);
+                    } ?>
                 <?php endforeach; ?>
                 
             </div><br>
@@ -1117,24 +1073,9 @@ $BASE = preg_replace('#(/(?:Admin|Carte|Cuisinier|LOG|Livraison|Notation|Profil|
             </div>
             <div class="menu-grid">
                 <?php foreach ($articles as $article): ?>
-                    <?php if ($article['type_post'] == 'pizza'): ?>
-                        <div class="menu-card" data-price="<?php echo (float)str_replace(',', '.', $article['prix']); ?>" data-sales="<?php echo ($article['code'] % 7); ?>">
-                            <div class="menu-card-img" style="background: linear-gradient(135deg,#FCE4EC,#F48FB1)">
-                                <span class="menu-emoji">&#127829;</span>
-                            </div>
-                            <div class="menu-card-body">
-                                <span class="menu-cat">Pizza</span>
-                                <h3><?php echo $article['nom']; ?></h3>
-                                <p><?php echo $article['description']; ?></p>
-                                <div class="menu-card-footer">
-                                    <span class="menu-price"><?php echo $article['prix']; ?> &euro;</span>
-                                    <form method="POST" action="index.php">
-                                        <button type="submit" name="add_pizza" value="<?php echo $article['code']; ?>" class="menu-add">+</button>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
-                    <?php endif; ?>
+                    <?php if ($article["type_post"] == "pizza") {
+                        carte_afficher_article($article, $CARTE_CATEGORIES);
+                    } ?>
                 <?php endforeach; ?>
             </div><br>
             <!-- Wraps & Tacos -->
@@ -1144,24 +1085,9 @@ $BASE = preg_replace('#(/(?:Admin|Carte|Cuisinier|LOG|Livraison|Notation|Profil|
             </div>
             <div class="menu-grid">
                 <?php foreach ($articles as $article): ?>
-                    <?php if ($article['type_post'] == 'wrap'): ?>
-                        <div class="menu-card" data-price="<?php echo (float)str_replace(',', '.', $article['prix']); ?>" data-sales="<?php echo ($article['code'] % 7); ?>">
-                            <div class="menu-card-img" style="background: linear-gradient(135deg,#E8F5E9,#A5D6A7)">
-                                <span class="menu-emoji">&#127790;</span>
-                            </div>
-                            <div class="menu-card-body">
-                                <span class="menu-cat">Wrap</span>
-                                <h3><?php echo $article['nom']; ?></h3>
-                                <p><?php echo $article['description']; ?></p>
-                                <div class="menu-card-footer">
-                                    <span class="menu-price"><?php echo $article['prix']; ?> &euro;</span>
-                                    <form method="POST" action="index.php">
-                                        <button type="submit" name="add_wrap" value="<?php echo $article['code']; ?>" class="menu-add">+</button>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
-                    <?php endif; ?>
+                    <?php if ($article["type_post"] == "wrap") {
+                        carte_afficher_article($article, $CARTE_CATEGORIES);
+                    } ?>
                 <?php endforeach; ?>
             </div><br>
             <!-- Accompagnements -->
@@ -1175,24 +1101,9 @@ $BASE = preg_replace('#(/(?:Admin|Carte|Cuisinier|LOG|Livraison|Notation|Profil|
             </div>
             <div class="menu-grid">
                 <?php foreach ($articles as $article): ?>
-                    <?php if ($article['type_post'] == 'side'): ?>
-                        <div class="menu-card" data-price="<?php echo (float)str_replace(',', '.', $article['prix']); ?>" data-sales="<?php echo ($article['code'] % 7); ?>">
-                            <div class="menu-card-img" style="background: linear-gradient(135deg,#FFF3E0,#FFCC80)">
-                                <span class="menu-emoji">&#127839;</span>
-                            </div>
-                            <div class="menu-card-body">
-                                <span class="menu-cat">Accompagnements</span>
-                                <h3><?php echo $article['nom']; ?></h3>
-                                <p><?php echo $article['description']; ?></p>
-                                <div class="menu-card-footer">
-                                    <span class="menu-price"><?php echo $article['prix']; ?> &euro;</span>
-                                    <form method="POST" action="index.php">
-                                        <button type="submit" name="add_side" value="<?php echo $article['code']; ?>" class="menu-add">+</button>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
-                    <?php endif; ?>
+                    <?php if ($article["type_post"] == "side") {
+                        carte_afficher_article($article, $CARTE_CATEGORIES);
+                    } ?>
                 <?php endforeach; ?>
             </div><br>
             <!-- Desserts -->
@@ -1202,24 +1113,9 @@ $BASE = preg_replace('#(/(?:Admin|Carte|Cuisinier|LOG|Livraison|Notation|Profil|
             </div>
             <div class="menu-grid">
             <?php foreach ($articles as $article): ?>
-                    <?php if ($article['type_post'] == 'dessert'): ?>
-                        <div class="menu-card" data-price="<?php echo (float)str_replace(',', '.', $article['prix']); ?>" data-sales="<?php echo ($article['code'] % 7); ?>">
-                            <div class="menu-card-img" style="background: linear-gradient(135deg,#FCE4EC,#F48FB1)">
-                                <span class="menu-emoji">&#127846;</span>
-                            </div>
-                            <div class="menu-card-body">
-                                <span class="menu-cat">Dessert</span>
-                                <h3><?php echo $article['nom']; ?></h3>
-                                <p><?php echo $article['description']; ?></p>
-                                <div class="menu-card-footer">
-                                    <span class="menu-price"><?php echo $article['prix']; ?> &euro;</span>
-                                    <form method="POST" action="index.php">
-                                        <button type="submit" name="add_dessert" value="<?php echo $article['code']; ?>" class="menu-add">+</button>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
-                    <?php endif; ?>
+                    <?php if ($article["type_post"] == "dessert") {
+                        carte_afficher_article($article, $CARTE_CATEGORIES);
+                    } ?>
                 <?php endforeach; ?>
             </div><br>
             <!-- Boissons -->
@@ -1229,24 +1125,9 @@ $BASE = preg_replace('#(/(?:Admin|Carte|Cuisinier|LOG|Livraison|Notation|Profil|
             </div>
             <div class="menu-grid">
             <?php foreach ($articles as $article): ?>
-                    <?php if ($article['type_post'] == 'boisson'): ?>
-                        <div class="menu-card" data-price="<?php echo (float)str_replace(',', '.', $article['prix']); ?>" data-sales="<?php echo ($article['code'] % 7); ?>">
-                            <div class="menu-card-img" style="background: linear-gradient(135deg,#E3F2FD,#90CAF9)">
-                                <span class="menu-emoji">&#129380;</span>
-                            </div>
-                            <div class="menu-card-body">
-                                <span class="menu-cat">Boisson</span>
-                                <h3><?php echo $article['nom']; ?></h3>
-                                <p><?php echo $article['description']; ?></p>
-                                <div class="menu-card-footer">
-                                    <span class="menu-price"><?php echo $article['prix']; ?> &euro;</span>
-                                    <form method="POST" action="index.php">
-                                        <button type="submit" name="add_boisson" value="<?php echo $article['code']; ?>" class="menu-add">+</button>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
-                    <?php endif; ?>
+                    <?php if ($article["type_post"] == "boisson") {
+                        carte_afficher_article($article, $CARTE_CATEGORIES);
+                    } ?>
                 <?php endforeach; ?>
             </div><br>
         </section>
@@ -1283,7 +1164,12 @@ $BASE = preg_replace('#(/(?:Admin|Carte|Cuisinier|LOG|Livraison|Notation|Profil|
         <div class="cart-panel">
 
             <div class="cart-panel-header">
-                <h2>Mon Panier <?php if ($panier_count > 0): ?><span style="font-weight:400;color:var(--grey-text);font-size:0.85rem">(<?= $panier_count ?> article<?= $panier_count > 1 ? 's' : '' ?>)</span><?php endif; ?></h2>
+                <h2>Mon Panier <?php if (
+                    $panier_count > 0
+                ): ?><span style="font-weight:400;color:var(--grey-text);font-size:0.85rem">(<?= $panier_count ?> article<?= $panier_count >
+ 1
+     ? "s"
+     : "" ?>)</span><?php endif; ?></h2>
                 <button type="button" class="cart-close-btn" id="cartClose" title="Fermer">&#x2715;</button>
             </div>
 
@@ -1293,20 +1179,36 @@ $BASE = preg_replace('#(/(?:Admin|Carte|Cuisinier|LOG|Livraison|Notation|Profil|
                     <?php foreach ($panier_items as $item): ?>
                         <div class="cart-item">
                             <div class="cart-item-info">
-                                <span class="cart-item-cat"><?= htmlspecialchars($item['cat']) ?></span>
-                                <span class="cart-item-name"><?= htmlspecialchars($item['name']) ?></span>
-                                <span class="cart-item-subtotal"><?= number_format($item['price'], 2, ',', '') ?> € × <?= $item['qty'] ?> = <?= number_format($item['subtotal'], 2, ',', '') ?> €</span>
+                                <span class="cart-item-cat"><?= htmlspecialchars($item["cat"]) ?></span>
+                                <span class="cart-item-name"><?= htmlspecialchars($item["name"]) ?></span>
+                                <span class="cart-item-subtotal"><?= number_format(
+                                    $item["price"],
+                                    2,
+                                    ",",
+                                    "",
+                                ) ?> € × <?= $item["qty"] ?> = <?= number_format(
+     $item["subtotal"],
+     2,
+     ",",
+     "",
+ ) ?> €</span>
                             </div>
                             <div class="cart-item-controls">
                                 <form method="POST">
-                                    <button type="submit" name="cart_remove" value="<?= $item['id'] ?>" class="cart-qty-btn" title="Retirer un">&#8722;</button>
+                                    <button type="submit" name="cart_remove" value="<?= $item[
+                                        "id"
+                                    ] ?>" class="cart-qty-btn" title="Retirer un">&#8722;</button>
                                 </form>
-                                <span class="cart-qty-num"><?= $item['qty'] ?></span>
+                                <span class="cart-qty-num"><?= $item["qty"] ?></span>
                                 <form method="POST">
-                                    <button type="submit" name="cart_add_<?= $item['post'] ?>" value="<?= $item['id'] ?>" class="cart-qty-btn" title="Ajouter un">+</button>
+                                    <button type="submit" name="cart_add_<?= $item["post"] ?>" value="<?= $item[
+    "id"
+] ?>" class="cart-qty-btn" title="Ajouter un">+</button>
                                 </form>
                                 <form method="POST">
-                                    <button type="submit" name="cart_delete" value="<?= $item['id'] ?>" class="cart-qty-btn delete" title="Supprimer">&#x2715;</button>
+                                    <button type="submit" name="cart_delete" value="<?= $item[
+                                        "id"
+                                    ] ?>" class="cart-qty-btn delete" title="Supprimer">&#x2715;</button>
                                 </form>
                             </div>
                         </div>
@@ -1316,7 +1218,7 @@ $BASE = preg_replace('#(/(?:Admin|Carte|Cuisinier|LOG|Livraison|Notation|Profil|
                 <div class="cart-panel-footer">
                     <div class="cart-total-row">
                         <span class="cart-total-label">Total</span>
-                        <span class="cart-total-amount"><?= number_format($panier_total, 2, ',', '') ?> &euro;</span>
+                        <span class="cart-total-amount"><?= number_format($panier_total, 2, ",", "") ?> &euro;</span>
                     </div>
                     <div class="cart-footer-actions">
                         <form method="POST">

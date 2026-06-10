@@ -1,346 +1,371 @@
-<?php 
-$BASE = preg_replace('#(/(?:Admin|Carte|Cuisinier|LOG|Livraison|Notation|Profil|Sujet|CYBank)(?:/.*)?)?/[^/]*$#', '', $_SERVER['SCRIPT_NAME']);
-    require_once '../../../protection.php';
-    $pdo_etudiant = $pdo;
-    require_once __DIR__ . '/../../../../db_config_yumland.php';
-    $pdo_commandes = $pdo;
-    require_once 'getapikey.php';
-    require_once __DIR__ . '/delivery_distance.php';
+<?php
+// chemin de base du site pour que les liens marchent partout
+$BASE = preg_replace(
+    '#(/(?:Admin|Carte|Cuisinier|LOG|Livraison|Notation|Profil|Sujet|CYBank)(?:/.*)?)?/[^/]*$#',
+    "",
+    $_SERVER["SCRIPT_NAME"],
+);
+// protection.php demarre la session et nous donne $est_connecte, $nom_affiche et $pdo
+require_once "../../../protection.php";
+// base des comptes d'un cote, base des commandes de l'autre
+$pdo_etudiant = $pdo;
+require_once __DIR__ . "/../../../../db_config_yumland.php";
+$pdo_commandes = $pdo;
+// getapikey donne la cle de la banque ; delivery_distance calcule les frais de livraison
+require_once "getapikey.php";
+require_once __DIR__ . "/delivery_distance.php";
 ?>
 
 <?php
+// valeurs par defaut tant qu'on n'a pas recu de retour de paiement
+$statut = "En attente";
+$statut_production = "En attente";
+$bool_paiement_traite = false;
+// identifiant de la transaction cybank : sert a ne pas enregistrer deux fois la commande si on rafraichit (F5)
+$cybank_transaction_id = null;
+$message = null;
 
-  $statut = "En attente";
-  $statut_production = "En attente";
-  $bool_paiement_traite = false;
-  /** Identifiant CYBank (GET transaction) — sert à éviter un double enregistrement au F5. */
-  $cybank_transaction_id = null;
-  $message = null;
+// si l'url contient les parametres de cybank, c'est qu'on revient d'un paiement
+if (
+    isset($_GET["montant"]) &&
+    isset($_GET["transaction"]) &&
+    isset($_GET["status"]) &&
+    isset($_GET["vendeur"]) &&
+    isset($_GET["control"])
+) {
+    $montant = $_GET["montant"];
+    $transaction = $_GET["transaction"];
+    $status = $_GET["status"];
+    $vendeur = $_GET["vendeur"];
+    $control_output = $_GET["control"];
 
-    if(isset($_GET['montant']) && isset($_GET['transaction']) && isset($_GET['status']) && isset($_GET['vendeur']) && isset($_GET['control']))
-    {
-        $montant = $_GET['montant'];
-        $transaction = $_GET['transaction'];
-        $status = $_GET['status'];
-        $vendeur = $_GET['vendeur'];
-        $control_output = $_GET['control'];
+    $API = getAPIKey($vendeur);
 
-        $API = getAPIKey($vendeur);
-
-        $control_input = md5($API . "#" . $transaction . "#" . $montant . "#" . $vendeur . "#" . $status . "#");
-        if ($control_input == $control_output)
-        {
-            if ($status === "accepted")
-            {
-                $message = "Paiement effectué avec succès";
-                $statut = "Payé";
-                $cybank_transaction_id = $transaction;
-                $bool_paiement_traite = true;
-            }
-            else
-            {
-                $message = "Erreur lors du paiement";
-                $statut = "Erreur paiment CYBANK";
-            }
+    // on recalcule la signature de notre cote et on la compare a celle envoyee par la banque
+    // si elles sont differentes, c'est que les donnees ont ete trafiquees, on refuse
+    $control_input = md5($API . "#" . $transaction . "#" . $montant . "#" . $vendeur . "#" . $status . "#");
+    if ($control_input == $control_output) {
+        // signature ok : on regarde si la banque a accepte ou refuse le paiement
+        if ($status === "accepted") {
+            $message = "Paiement effectué avec succès";
+            $statut = "Payé";
+            $cybank_transaction_id = $transaction;
+            $bool_paiement_traite = true;
+        } else {
+            $message = "Erreur lors du paiement";
+            $statut = "Erreur paiment CYBANK";
         }
-        else
-        {
-            $message = "Erreur lors de la vérification du paiement";
-        }
-
+    } else {
+        $message = "Erreur lors de la vérification du paiement";
     }
+}
 
-    function PaimentCYBANK($panier_total)
-    {
-        $vendeur = "MI-1_E";
-        $API = getAPIKey($vendeur);
-        $transaction = uniqid(); 
-        $montant = number_format($panier_total, 2, '.', '');
-        $retour = "https://alexandre-gourdon.fr{$BASE}/CYBank/index.php";
-        $control = md5($API . "#" . $transaction . "#" . $montant . "#" . $vendeur . "#" . $retour . "#");
+// on passe $BASE en parametre : une fonction php ne voit pas les variables du fichier
+// sans ca $BASE serait vide, l'url de retour perdrait le /ProjetCYJ/CYJ et cybank reviendrait sur une page 404
+function PaimentCYBANK($panier_total, $BASE)
+{
+    $vendeur = "MI-1_E";
+    $API = getAPIKey($vendeur);
+    $transaction = uniqid();
+    $montant = number_format($panier_total, 2, ".", "");
+    // url ou cybank nous renverra une fois le paiement fait (on revient sur cette meme page)
+    $retour = "https://alexandre-gourdon.fr{$BASE}/CYBank/index.php";
+    $control = md5($API . "#" . $transaction . "#" . $montant . "#" . $vendeur . "#" . $retour . "#");
 
-        echo "<form action='https://www.plateforme-smc.fr/cybank/index.php' method='POST'>";
-        echo "<input type='hidden' name='transaction' value='$transaction'>";
-        echo "<input type='hidden' name='montant' value='$montant'>";
-        echo "<input type='hidden' name='vendeur' value='$vendeur'>";
-        echo "<input type='hidden' name='retour' value='$retour'>";
-        echo "<input type='hidden' name='control' value='$control'>";
-        echo "<input type='submit' value='Payer'>";
-        echo "</form>";
+    echo "<form action='https://www.plateforme-smc.fr/cybank/index.php' method='POST'>";
+    echo "<input type='hidden' name='transaction' value='$transaction'>";
+    echo "<input type='hidden' name='montant' value='$montant'>";
+    echo "<input type='hidden' name='vendeur' value='$vendeur'>";
+    echo "<input type='hidden' name='retour' value='$retour'>";
+    echo "<input type='hidden' name='control' value='$control'>";
+    echo "<input type='submit' value='Payer'>";
+    echo "</form>";
 
-        echo "<script>document.forms[0].submit();</script>";
-        exit;
+    echo "<script>document.forms[0].submit();</script>";
+    exit();
+}
+
+// on charge le catalogue depuis la base : les articles et les menus (memes tables que la page Carte)
+$stmt = $pdo_commandes->prepare("SELECT * FROM articles");
+$stmt->execute();
+$articles_rows = $stmt->fetchAll();
+
+$stmt = $pdo_commandes->prepare("SELECT * FROM menus");
+$stmt->execute();
+$menus_rows = $stmt->fetchAll();
+
+$catalog = [];
+$type_post_labels = [
+    "menu" => "Menu",
+    "burger" => "Burger",
+    "pizza" => "Pizza",
+    "wrap" => "Wrap / Tacos",
+    "side" => "Accompagnement",
+    "dessert" => "Dessert",
+    "boisson" => "Boisson",
+];
+foreach ($articles_rows as $article_row) {
+    $row = array_change_key_case($article_row, CASE_LOWER);
+    $id = (int) ($row["code"] ?? ($row["id"] ?? 0));
+    if ($id <= 0) {
+        continue;
     }
-
-
-
-
-
-
-    // ── Catalogue : même logique que Carte/index.php (tables articles + menus)
-    $stmt = $pdo_commandes->prepare('SELECT * FROM articles');
-    $stmt->execute();
-    $articles_rows = $stmt->fetchAll();
-
-    $stmt = $pdo_commandes->prepare('SELECT * FROM menus');
-    $stmt->execute();
-    $menus_rows = $stmt->fetchAll();
-
-    $catalog = [];
-    $type_post_labels = [
-        'menu' => 'Menu',
-        'burger' => 'Burger',
-        'pizza' => 'Pizza',
-        'wrap' => 'Wrap / Tacos',
-        'side' => 'Accompagnement',
-        'dessert' => 'Dessert',
-        'boisson' => 'Boisson',
+    $post = strtolower(trim((string) ($row["type_post"] ?? "")));
+    $prix_raw = str_replace(",", ".", (string) ($row["prix"] ?? "0"));
+    $cat_label =
+        isset($row["categorie"]) && $row["categorie"] !== ""
+            ? (string) $row["categorie"]
+            : $type_post_labels[$post] ?? ucfirst($post);
+    $catalog[$id] = [
+        "name" => (string) ($row["nom"] ?? ""),
+        "price" => (float) $prix_raw,
+        "cat" => $cat_label,
+        "post" => $post,
     ];
-    foreach ($articles_rows as $article_row) {
-        $row = array_change_key_case($article_row, CASE_LOWER);
-        $id = (int) ($row['code'] ?? $row['id'] ?? 0);
-        if ($id <= 0) {
+}
+
+foreach ($menus_rows as $menu_row) {
+    $m = array_change_key_case($menu_row, CASE_LOWER);
+    $mid = (int) ($m["id"] ?? 0);
+    if ($mid <= 0) {
+        continue;
+    }
+    $catKey = -$mid;
+    $nom_menu = (string) ($m["nom_menu"] ?? ($m["nom"] ?? "Menu"));
+    $prix_menu = str_replace(",", ".", (string) ($m["prix"] ?? "0"));
+    $catalog[$catKey] = [
+        "name" => $nom_menu,
+        "price" => (float) $prix_menu,
+        "cat" => "Menu",
+        "post" => "menu",
+    ];
+}
+
+// ── Lecture du panier session
+$panier = $_SESSION["panier"] ?? [];
+
+$panier_count = 0;
+$panier_total = 0.0;
+$panier_items = [];
+
+foreach ($panier as $items) {
+    foreach ($items as $id => $qty) {
+        if ($qty <= 0 || !isset($catalog[$id])) {
             continue;
         }
-        $post = strtolower(trim((string) ($row['type_post'] ?? '')));
-        $prix_raw = str_replace(',', '.', (string) ($row['prix'] ?? '0'));
-        $cat_label = (isset($row['categorie']) && $row['categorie'] !== '')
-            ? (string) $row['categorie']
-            : ($type_post_labels[$post] ?? ucfirst($post));
-        $catalog[$id] = [
-            'name' => (string) ($row['nom'] ?? ''),
-            'price' => (float) $prix_raw,
-            'cat' => $cat_label,
-            'post' => $post,
+        $item = $catalog[$id];
+        $panier_count += $qty;
+        $panier_total += $item["price"] * $qty;
+        $panier_items[] = [
+            "id" => $id,
+            "qty" => $qty,
+            "name" => $item["name"],
+            "price" => $item["price"],
+            "cat" => $item["cat"],
+            "subtotal" => $item["price"] * $qty,
         ];
     }
+}
 
-    foreach ($menus_rows as $menu_row) {
-        $m = array_change_key_case($menu_row, CASE_LOWER);
-        $mid = (int) ($m['id'] ?? 0);
-        if ($mid <= 0) {
-            continue;
-        }
-        $catKey = -$mid;
-        $nom_menu = (string) ($m['nom_menu'] ?? $m['nom'] ?? 'Menu');
-        $prix_menu = str_replace(',', '.', (string) ($m['prix'] ?? '0'));
-        $catalog[$catKey] = [
-            'name' => $nom_menu,
-            'price' => (float) $prix_menu,
-            'cat' => 'Menu',
-            'post' => 'menu',
-        ];
+if (isset($_POST["payer"])) {
+    if (isset($_POST["timing"]) && $_POST["timing"] === "later" && !empty($_POST["delivery_time"])) {
+        $_SESSION["heure_livraison"] = $_POST["delivery_time"];
+    } else {
+        unset($_SESSION["heure_livraison"]);
     }
 
-    // ── Lecture du panier session 
-    $panier = $_SESSION['panier'] ?? [];
+    // Conservé en session : après CYBank le navigateur revient en GET, le formulaire n’est plus là
+    $liv = [
+        "adresse" => isset($_POST["adresse"]) ? trim((string) $_POST["adresse"]) : "",
+        "code_postal" => isset($_POST["code_postal"]) ? trim((string) $_POST["code_postal"]) : "",
+        "ville" => isset($_POST["ville"]) ? trim((string) $_POST["ville"]) : "",
+        "pays" => isset($_POST["pays"]) ? trim((string) $_POST["pays"]) : "",
+        "telephone" => isset($_POST["telephone"]) ? trim((string) $_POST["telephone"]) : "",
+        "email" => isset($_POST["email"]) ? trim((string) $_POST["email"]) : "",
+        "nom" => isset($_POST["nom"]) ? trim((string) $_POST["nom"]) : "",
+        "prenom" => isset($_POST["prenom"]) ? trim((string) $_POST["prenom"]) : "",
+    ];
+    $liv["adresse"] = mb_substr($liv["adresse"], 0, 255);
+    $liv["code_postal"] = mb_substr($liv["code_postal"], 0, 10);
+    $liv["ville"] = mb_substr($liv["ville"], 0, 100);
+    $liv["pays"] = mb_substr($liv["pays"], 0, 100);
+    $liv["telephone"] = mb_substr($liv["telephone"], 0, 20);
+    $liv["nom"] = mb_substr($liv["nom"], 0, 100);
+    $liv["prenom"] = mb_substr($liv["prenom"], 0, 100);
+    $liv["email"] = mb_substr($liv["email"], 0, 255);
+    $_SESSION["checkout_livraison"] = $liv;
 
-    $panier_count = 0;
-    $panier_total = 0.0;
-    $panier_items = [];
+    unset($_SESSION["cybank_checkout_total"], $_SESSION["cybank_checkout_frais"]);
 
-    foreach ($panier as $items) {
-        foreach ($items as $id => $qty) {
-            if ($qty <= 0 || !isset($catalog[$id])) continue;
-            $item = $catalog[$id];
-            $panier_count += $qty;
-            $panier_total += $item['price'] * $qty;
-            $panier_items[] = [
-                'id'       => $id,
-                'qty'      => $qty,
-                'name'     => $item['name'],
-                'price'    => $item['price'],
-                'cat'      => $item['cat'],
-                'subtotal' => $item['price'] * $qty,
-            ];
-        }
-    }
+    // l'utilisateur a clique sur payer : paiement = methode choisie, cb_paiement = infos de la carte
+    if (isset($_POST["paiement"]) && isset($_POST["cb_paiement"])) {
+        $paiement = $_POST["paiement"];
+        $cb_paiement = $_POST["cb_paiement"];
 
-
-
-    if(isset($_POST['payer'])) {
-        if (isset($_POST['timing']) && $_POST['timing'] === 'later' && !empty($_POST['delivery_time'])) {
-            $_SESSION['heure_livraison'] = $_POST['delivery_time'];
-        } else {
-            unset($_SESSION['heure_livraison']);
-        }
-
-        // Conservé en session : après CYBank le navigateur revient en GET, le formulaire n’est plus là
-        $liv = [
-            'adresse'     => isset($_POST['adresse']) ? trim((string) $_POST['adresse']) : '',
-            'code_postal' => isset($_POST['code_postal']) ? trim((string) $_POST['code_postal']) : '',
-            'ville'       => isset($_POST['ville']) ? trim((string) $_POST['ville']) : '',
-            'pays'        => isset($_POST['pays']) ? trim((string) $_POST['pays']) : '',
-            'telephone'   => isset($_POST['telephone']) ? trim((string) $_POST['telephone']) : '',
-            'email'       => isset($_POST['email']) ? trim((string) $_POST['email']) : '',
-            'nom'         => isset($_POST['nom']) ? trim((string) $_POST['nom']) : '',
-            'prenom'      => isset($_POST['prenom']) ? trim((string) $_POST['prenom']) : '',
-        ];
-        $liv['adresse'] = mb_substr($liv['adresse'], 0, 255);
-        $liv['code_postal'] = mb_substr($liv['code_postal'], 0, 10);
-        $liv['ville'] = mb_substr($liv['ville'], 0, 100);
-        $liv['pays'] = mb_substr($liv['pays'], 0, 100);
-        $liv['telephone'] = mb_substr($liv['telephone'], 0, 20);
-        $liv['nom'] = mb_substr($liv['nom'], 0, 100);
-        $liv['prenom'] = mb_substr($liv['prenom'], 0, 100);
-        $liv['email'] = mb_substr($liv['email'], 0, 255);
-        $_SESSION['checkout_livraison'] = $liv;
-
-        unset($_SESSION['cybank_checkout_total'], $_SESSION['cybank_checkout_frais']);
-
-        if(isset($_POST['paiement']) && isset($_POST['cb_paiement'])) {
-            $paiement = $_POST['paiement'];
-            $cb_paiement = $_POST['cb_paiement'];
-
-            switch($paiement)
-            {
-                case "1":
-                    $addrFull = deliveryFormatClientAddress(
-                        $liv['adresse'] ?? '',
-                        $liv['code_postal'] ?? '',
-                        $liv['ville'] ?? '',
-                        $liv['pays'] ?? ''
-                    );
-                    if (mb_strlen($addrFull) < 8) {
-                        $message = 'Veuillez compléter l’adresse de livraison (rue, code postal, ville).';
-                        break;
-                    }
+        switch ($paiement) {
+            case "1":
+                // paiement par carte (cybank) : on verifie d'abord que l'adresse de livraison est remplie
+                $addrFull = deliveryFormatClientAddress(
+                    $liv["adresse"] ?? "",
+                    $liv["code_postal"] ?? "",
+                    $liv["ville"] ?? "",
+                    $liv["pays"] ?? "",
+                );
+                if (mb_strlen($addrFull) < 8) {
+                    $message = "Veuillez compléter l’adresse de livraison (rue, code postal, ville).";
+                    break;
+                }
+                // mode secours : si l'utilisateur coche la case (API Google Directions indisponible,
+                // ex. facturation non activee), on saute le calcul d'itineraire et on applique un forfait fixe
+                $skip_delivery_check = isset($_POST["skip_delivery_check"]) && $_POST["skip_delivery_check"] === "1";
+                if ($skip_delivery_check) {
+                    // forfait fixe : on ne connait pas la distance, donc pas de controle des 20 km non plus
+                    $frais_livraison_checkout = (float) DELIVERY_PRICING["fallback_fee"];
+                } else {
+                    // on calcule les frais de livraison pour cette adresse
                     $estLivraison = deliveryEstimate($addrFull, $panier_total);
-                    if (empty($estLivraison['ok'])) {
-                        $message = (string) ($estLivraison['error'] ?? 'Impossible de valider la livraison pour cette adresse.');
+                    if (empty($estLivraison["ok"])) {
+                        $message =
+                            (string) ($estLivraison["error"] ?? "Impossible de valider la livraison pour cette adresse.");
                         break;
                     }
-                    $frais_livraison_checkout = (float) ($estLivraison['cost'] ?? 0.0);
-                    $total_charge_cb = round($panier_total + $frais_livraison_checkout, 2);
-                    $_SESSION['cybank_checkout_total'] = $total_charge_cb;
-                    $_SESSION['cybank_checkout_frais'] = $frais_livraison_checkout;
-                    PaimentCYBANK($total_charge_cb);
-                    break;
-                case "2":
-                    $message = "Paiement par PayPal";
-                    break;
-                case "3":
-                    $message = "Paiement Google Pay";
-                    break;
-                default: 
-                    $message = "Erreur inconnue";
-                    break;
-            }
+                    // cout calcule a partir de la distance Google Maps
+                    $frais_livraison_checkout = (float) ($estLivraison["cost"] ?? 0.0);
+                }
+                // total a payer (panier + livraison), garde en session pour l'enregistrement apres le retour de paiement
+                $total_charge_cb = round($panier_total + $frais_livraison_checkout, 2);
+                $_SESSION["cybank_checkout_total"] = $total_charge_cb;
+                $_SESSION["cybank_checkout_frais"] = $frais_livraison_checkout;
+                // on part vers la banque : cette fonction affiche le formulaire, le soumet tout seul et arrete le script
+                PaimentCYBANK($total_charge_cb, $BASE);
+                break;
+            case "2":
+                // paypal pas encore implemente
+                $message = "Paiement par PayPal";
+                break;
+            case "3":
+                // google pay pas encore implemente
+                $message = "Paiement Google Pay";
+                break;
+            default:
+                $message = "Erreur inconnue";
+                break;
         }
     }
+}
 
-    //Insertion de la commande dans la base de données (BDD insert)
+// on enregistre la commande en base seulement si le paiement a bien ete accepte
+if ($statut === "Payé" && $cybank_transaction_id !== null) {
+    if (!isset($_SESSION["cybank_transactions_traitees"])) {
+        $_SESSION["cybank_transactions_traitees"] = [];
+    }
 
-    if ($statut === "Payé" && $cybank_transaction_id !== null)
-    {
-        if (!isset($_SESSION['cybank_transactions_traitees'])) {
-            $_SESSION['cybank_transactions_traitees'] = [];
+    // si cette transaction a deja ete traitee (cas du F5), on ne reenregistre pas la commande
+    if (isset($_SESSION["cybank_transactions_traitees"][$cybank_transaction_id])) {
+        $message = "Paiement effectué avec succès. Votre commande sera prise en charge dans les plus brefs délais.";
+    } elseif (empty($panier_items)) {
+        $message = "Paiement reçu, mais le panier est vide : aucune commande enregistrée.";
+    } else {
+        $db_user_id = null;
+        $db_user_email = null;
+        if ($est_connecte && !empty($_SESSION["nom_utilisateur"])) {
+            $stmtUser = $pdo_etudiant->prepare("SELECT id, email FROM users WHERE username = ? LIMIT 1");
+            $stmtUser->execute([$_SESSION["nom_utilisateur"]]);
+            $row = $stmtUser->fetch(PDO::FETCH_ASSOC);
+            if ($row) {
+                $db_user_id = (int) $row["id"];
+                if (!empty($row["email"])) {
+                    $db_user_email = (string) $row["email"];
+                }
+            }
         }
 
-        if (isset($_SESSION['cybank_transactions_traitees'][$cybank_transaction_id])) {
-            $message = "Paiement effectué avec succès. Votre commande sera prise en charge dans les plus brefs délais.";
-        } elseif (empty($panier_items)) {
-            $message = "Paiement reçu, mais le panier est vide : aucune commande enregistrée.";
+        if ($db_user_id === null) {
+            $message = "Erreur : impossible d'associer la commande à un compte utilisateur.";
         } else {
-            $db_user_id = null;
-            $db_user_email = null;
-            if ($est_connecte && !empty($_SESSION['nom_utilisateur'])) {
-                $stmtUser = $pdo_etudiant->prepare("SELECT id, email FROM users WHERE username = ? LIMIT 1");
-                $stmtUser->execute([$_SESSION['nom_utilisateur']]);
-                $row = $stmtUser->fetch(PDO::FETCH_ASSOC);
-                if ($row) {
-                    $db_user_id = (int) $row['id'];
-                    if (!empty($row['email'])) {
-                        $db_user_email = (string) $row['email'];
-                    }
+            $date_commande = date("Y-m-d H:i:s");
+            $heure_livraison = $_SESSION["heure_livraison"] ?? null;
+            $liv = $_SESSION["checkout_livraison"] ?? [];
+            $email_commande = !empty($liv["email"]) ? $liv["email"] : $db_user_email;
+            // petit raccourci : renvoie null si la valeur est vide, sinon la valeur en texte
+            $strOrNull = static function ($v) {
+                if ($v === null || $v === "") {
+                    return null;
                 }
-            }
+                return is_string($v) ? $v : (string) $v;
+            };
+            try {
+                // on fait tout dans une transaction : soit toute la commande s'enregistre, soit rien du tout
+                $pdo_commandes->beginTransaction();
 
-            if ($db_user_id === null) {
-                $message = "Erreur : impossible d'associer la commande à un compte utilisateur.";
-            } else {
-                $date_commande = date('Y-m-d H:i:s');
-                $heure_livraison = $_SESSION['heure_livraison'] ?? null;
-                $liv = $_SESSION['checkout_livraison'] ?? [];
-                $email_commande = !empty($liv['email']) ? $liv['email'] : $db_user_email;
-                $strOrNull = static function ($v) {
-                    if ($v === null || $v === '') {
-                        return null;
-                    }
-                    return is_string($v) ? $v : (string) $v;
-                };
-                try {
-                    $pdo_commandes->beginTransaction();
+                $stmt = $pdo_commandes->prepare(
+                    "INSERT INTO commandes (user_id, email, date_commande, total, frais_livraison,montant_paye, nb_articles, statut, heure_livraison, adresse, code_postal, ville, pays, telephone, nom, prenom) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                );
+                // le total vient de la session (calcule avant le paiement), pas du montant recu dans l'url : c'est plus sur
+                $commande_total = isset($_SESSION["cybank_checkout_total"])
+                    ? (float) $_SESSION["cybank_checkout_total"]
+                    : (float) $panier_total;
+                $frais_livraison_checkout = (float) ($_SESSION["cybank_checkout_frais"] ?? 0.0);
 
-                    $stmt = $pdo_commandes->prepare(
-                        "INSERT INTO commandes (user_id, email, date_commande, total, frais_livraison,montant_paye, nb_articles, statut, heure_livraison, adresse, code_postal, ville, pays, telephone, nom, prenom) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-                    );
-                    $commande_total = isset($_SESSION['cybank_checkout_total'])
-                        ? (float) $_SESSION['cybank_checkout_total']
-                        : (float) $panier_total;
-                    $frais_livraison_checkout = (float) ($_SESSION['cybank_checkout_frais'] ?? 0.0);
+                $stmt->execute([
+                    $db_user_id,
+                    $email_commande,
+                    $date_commande,
+                    $commande_total,
+                    $frais_livraison_checkout,
+                    $commande_total,
+                    $panier_count,
+                    $statut,
+                    $heure_livraison,
+                    $strOrNull($liv["adresse"] ?? null),
+                    $strOrNull($liv["code_postal"] ?? null),
+                    $strOrNull($liv["ville"] ?? null),
+                    $strOrNull($liv["pays"] ?? null),
+                    $strOrNull($liv["telephone"] ?? null),
+                    $strOrNull($liv["nom"] ?? null),
+                    $strOrNull($liv["prenom"] ?? null),
+                ]);
 
-                    $stmt->execute([
-                        $db_user_id,
-                        $email_commande,
-                        $date_commande,
-                        $commande_total,
-                        $frais_livraison_checkout,
-                        $commande_total,
-                        $panier_count,
-                        $statut,
-                        $heure_livraison,
-                        $strOrNull($liv['adresse'] ?? null),
-                        $strOrNull($liv['code_postal'] ?? null),
-                        $strOrNull($liv['ville'] ?? null),
-                        $strOrNull($liv['pays'] ?? null),
-                        $strOrNull($liv['telephone'] ?? null),
-                        $strOrNull($liv['nom'] ?? null),
-                        $strOrNull($liv['prenom'] ?? null),
-                    ]);
-
-                    $commande_id = (int) $pdo_commandes->lastInsertId();
-                    if ($commande_id <= 0) {
-                        throw new PDOException("Identifiant de commande invalide après insertion.");
-                    }
-
-                    $stmtItem = $pdo_commandes->prepare(
-                        "INSERT INTO commande_items (commande_id, produit_id, nom, prix, quantite, paye) VALUES (?, ?, ?, ?, ?, 1)"
-                    );
-                    foreach ($panier_items as $item) {
-                        $stmtItem->execute([
-                            $commande_id,
-                            $item['id'],
-                            $item['name'],
-                            $item['price'],
-                            $item['qty'],
-                        ]);
-                    }
-
-                    $pdo_commandes->commit();
-
-                    $_SESSION['cybank_transactions_traitees'][$cybank_transaction_id] = true;
-                    $_SESSION['last_commande_id'] = $commande_id;
-                    unset($_SESSION['cybank_checkout_total'], $_SESSION['cybank_checkout_frais']);
-                    $_SESSION['panier'] = [
-                        'menus'    => [],
-                        'burgers'  => [],
-                        'pizzas'   => [],
-                        'wraps'    => [],
-                        'sides'    => [],
-                        'desserts' => [],
-                        'boissons' => [],
-                    ];
-                    unset($_SESSION['heure_livraison'], $_SESSION['checkout_livraison']);
-                } catch (PDOException $e) {
-                    if ($pdo_commandes->inTransaction()) {
-                        $pdo_commandes->rollBack();
-                    }
-                    $message = "Erreur lors de l'ajout de la commande : " . $e->getMessage();
+                $commande_id = (int) $pdo_commandes->lastInsertId();
+                if ($commande_id <= 0) {
+                    throw new PDOException("Identifiant de commande invalide après insertion.");
                 }
+
+                // on enregistre chaque article du panier, rattache a la commande, avec paye = 1
+                $stmtItem = $pdo_commandes->prepare(
+                    "INSERT INTO commande_items (commande_id, produit_id, nom, prix, quantite, paye) VALUES (?, ?, ?, ?, ?, 1)",
+                );
+                foreach ($panier_items as $item) {
+                    $stmtItem->execute([$commande_id, $item["id"], $item["name"], $item["price"], $item["qty"]]);
+                }
+
+                // tout s'est bien passe, on valide la transaction en base
+                $pdo_commandes->commit();
+
+                // on marque la transaction comme traitee (anti F5), on retient l'id et on vide le panier
+                $_SESSION["cybank_transactions_traitees"][$cybank_transaction_id] = true;
+                $_SESSION["last_commande_id"] = $commande_id;
+                unset($_SESSION["cybank_checkout_total"], $_SESSION["cybank_checkout_frais"]);
+                $_SESSION["panier"] = [
+                    "menus" => [],
+                    "burgers" => [],
+                    "pizzas" => [],
+                    "wraps" => [],
+                    "sides" => [],
+                    "desserts" => [],
+                    "boissons" => [],
+                ];
+                unset($_SESSION["heure_livraison"], $_SESSION["checkout_livraison"]);
+            } catch (PDOException $e) {
+                // en cas d'erreur on annule tout (rollback) pour ne pas laisser une commande a moitie enregistree
+                if ($pdo_commandes->inTransaction()) {
+                    $pdo_commandes->rollBack();
+                }
+                $message = "Erreur lors de l'ajout de la commande : " . $e->getMessage();
             }
         }
     }
+}
 ?>
 
 <!DOCTYPE html>
@@ -353,33 +378,246 @@ $BASE = preg_replace('#(/(?:Admin|Carte|Cuisinier|LOG|Livraison|Notation|Profil|
     <link rel="stylesheet" href="../accueil.css">
     <title>Panier - CY Restaurant</title>
     <style>
-    /*Pour afficher soit l'un soit l'autre*/
+        /*Pour afficher soit l'un soit l'autre*/
 
-    /*Pour la position sticky on là met ici et pas dans .navbar sinon bah ça s'applique pas vu que pcnavbar et mobilenavbar son parents de la classe nav */
-    .pcnavbar {
-      display: block;
-      position: sticky;
-      top: 0;
-      z-index: 100;
+        /*Pour la position sticky on là met ici et pas dans .navbar sinon bah ça s'applique pas vu que pcnavbar et mobilenavbar son parents de la classe nav */
+        .pcnavbar {
+            display: block;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .mobilenavbar {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            display: none;
+        }
+
+        @media (max-width: 900px) {
+            .pcnavbar {
+                display: none;
+            }
+
+            .mobilenavbar {
+                display: block;
+            }
+        }
+    </style>
+  <script>
+    // toggleTime reste une fonction globale : elle est appelee depuis un onclick dans le html (les radios immediate / plus tard)
+    // elle ne touche au html que quand on l'appelle, donc pas besoin d'attendre le chargement de la page
+    function toggleTime(show) {
+        const picker = document.getElementById('time_picker');
+        const input = document.getElementById('delivery_time');
+        if (!picker || !input) return;
+        // on affiche ou on cache le choix de l'heure, et le champ devient obligatoire seulement si on choisit plus tard
+        picker.classList.toggle('is-visible', show);
+        picker.setAttribute('aria-hidden', show ? 'false' : 'true');
+        input.required = !!show;
     }
 
-    .mobilenavbar {  
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      display: none;
-    }
+    // tout le reste touche au html tout de suite, donc on attend que la page soit chargee
+    document.addEventListener('DOMContentLoaded', function () {
+        const feesEl = document.getElementById('checkout-sum-fees');
+        const form = document.querySelector('.checkout-form');
+        if (!feesEl || !form) return;
 
-    @media (max-width: 900px) {
-      .pcnavbar {
-        display: none;
-      }
+        // ces deux infos viennent du html, dans des attributs data- poses sur le formulaire
+        const estimateUrl = form.getAttribute('data-estimate-url') || 'api_delivery_estimate.php';
+        let panierTotal = parseFloat(String(form.getAttribute('data-panier-total') || '0').replace(',', '.'), 10);
+        if (isNaN(panierTotal)) panierTotal = 0;
 
-      .mobilenavbar {
-        display: block;
-      }
-    }
-  </style>
+        // mode secours : case "ignorer la verification d'adresse" + forfait fixe associe (data- pose sur le formulaire)
+        let fallbackFee = parseFloat(String(form.getAttribute('data-fallback-fee') || '0').replace(',', '.'), 10);
+        if (isNaN(fallbackFee)) fallbackFee = 0;
+        const skipEl = document.getElementById('skip_delivery_check');
+        let skipMode = skipEl ? skipEl.checked : false;
+
+        const totalEl = document.getElementById('checkout-sum-total');
+        const hintEl = document.getElementById('checkout-delivery-hint');
+        const feedbackEl = document.getElementById('delivery_estimate_feedback');
+        const payAmountEl = document.getElementById('checkout_pay_amount');
+
+        // met un nombre au format euro francais (virgule et symbole)
+        function formatEuro(n) {
+            let x = Number(n);
+            if (isNaN(x)) x = 0;
+            return x.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+        }
+
+        // evite de lancer un calcul a chaque touche : on attend un petit moment apres la derniere frappe
+        function debounce(fn, ms) {
+            let t;
+            return function () {
+                const ctx = this, args = arguments;
+                clearTimeout(t);
+                t = setTimeout(function () { fn.apply(ctx, args); }, ms);
+            };
+        }
+
+        // recolle l'adresse complete a partir des champs rue, code postal et ville
+        function buildAddress() {
+            const a = document.getElementById('adresse');
+            const cp = document.getElementById('code_postal');
+            const v = document.getElementById('ville');
+            const line1 = a ? String(a.value || '').trim() : '';
+            const postal = cp ? String(cp.value || '').trim() : '';
+            const city = v ? String(v.value || '').trim() : '';
+            const parts = [];
+            if (line1) parts.push(line1);
+            const cityLine = (postal + ' ' + city).trim();
+            if (cityLine) parts.push(cityLine);
+            return parts.join(', ');
+        }
+
+        // seq sert a ignorer les vieilles reponses si l'utilisateur retape vite : on ne garde que la derniere
+        let seq = 0;
+
+        function setLoading(on) {
+            if (!feedbackEl) return;
+            if (on) {
+                feedbackEl.textContent = 'Calcul de l’itinéraire…';
+                feedbackEl.classList.add('checkout-delivery-estimate--loading');
+            } else {
+                feedbackEl.classList.remove('checkout-delivery-estimate--loading');
+            }
+        }
+
+        function updatePayAmount(total) {
+            if (payAmountEl) payAmountEl.textContent = formatEuro(total);
+        }
+
+        // affiche le forfait fixe quand la verification d'adresse est ignoree (pas d'appel serveur)
+        function applyFallback() {
+            const total = panierTotal + fallbackFee;
+            if (fallbackFee <= 0.0001) {
+                feesEl.textContent = 'Gratuit';
+                feesEl.classList.add('checkout-sum__value--free');
+            } else {
+                feesEl.textContent = formatEuro(fallbackFee);
+                feesEl.classList.remove('checkout-sum__value--free');
+            }
+            if (totalEl) totalEl.textContent = formatEuro(total);
+            updatePayAmount(total);
+            if (hintEl) hintEl.textContent = 'Vérification d’adresse ignorée · forfait fixe';
+            if (feedbackEl) {
+                feedbackEl.textContent = '';
+                feedbackEl.classList.remove('checkout-delivery-estimate--error');
+            }
+        }
+
+        // demande au serveur le cout de livraison pour l'adresse saisie, puis met a jour les montants affiches
+        function refreshEstimate() {
+            // si la case "ignorer la verification" est cochee, on n'appelle pas Google : forfait fixe
+            if (skipMode) { applyFallback(); return; }
+            const addr = buildAddress();
+            // tant que l'adresse est trop courte on n'appelle pas le serveur, on remet juste le total sans livraison
+            if (addr.length < 8) {
+                feesEl.textContent = '—';
+                feesEl.classList.remove('checkout-sum__value--free');
+                if (totalEl) totalEl.textContent = formatEuro(panierTotal);
+                updatePayAmount(panierTotal);
+                if (hintEl) {
+                    hintEl.textContent = 'Saisissez rue, code postal et ville : estimation automatique (Google Maps).';
+                }
+                if (feedbackEl) {
+                    feedbackEl.textContent = '';
+                    feedbackEl.classList.remove('checkout-delivery-estimate--error');
+                }
+                return;
+            }
+            const my = ++seq;
+            setLoading(true);
+            if (feedbackEl) feedbackEl.classList.remove('checkout-delivery-estimate--error');
+
+            fetch(estimateUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                credentials: 'same-origin',
+                body: JSON.stringify({ address: addr, order_total: panierTotal })
+            })
+                .then(function (res) {
+                    return res.json().then(function (data) {
+                        return { httpOk: res.ok, data: data };
+                    });
+                })
+                .then(function (wrapped) {
+                    // si une requete plus recente est partie entre temps, on ignore cette reponse
+                    if (my !== seq) return;
+                    setLoading(false);
+                    const data = wrapped.data || {};
+                    if (!wrapped.httpOk || !data.ok) {
+                        feesEl.textContent = '—';
+                        feesEl.classList.remove('checkout-sum__value--free');
+                        if (totalEl) totalEl.textContent = formatEuro(panierTotal);
+                        updatePayAmount(panierTotal);
+                        if (hintEl) hintEl.textContent = 'Estimation indisponible pour cette saisie.';
+                        if (feedbackEl) {
+                            feedbackEl.textContent = (data && data.error) ? String(data.error) : 'Erreur lors du calcul.';
+                            feedbackEl.classList.add('checkout-delivery-estimate--error');
+                        }
+                        return;
+                    }
+                    // le cout vient du serveur, on calcule le total panier plus livraison
+                    let cost = typeof data.cost === 'number' ? data.cost : parseFloat(String(data.cost || '0').replace(',', '.'));
+                    if (isNaN(cost)) cost = 0;
+                    const total = panierTotal + cost;
+                    // livraison gratuite ou pas, on l'affiche en consequence
+                    if (data.free_delivery || cost <= 0.0001) {
+                        feesEl.textContent = 'Gratuit';
+                        feesEl.classList.add('checkout-sum__value--free');
+                    } else {
+                        feesEl.textContent = formatEuro(cost);
+                        feesEl.classList.remove('checkout-sum__value--free');
+                    }
+                    if (totalEl) totalEl.textContent = formatEuro(total);
+                    updatePayAmount(total);
+                    const bits = [];
+                    if (data.distance_text) bits.push(String(data.distance_text));
+                    if (data.duration_text) bits.push('≈ ' + String(data.duration_text));
+                    if (hintEl) hintEl.textContent = bits.length ? bits.join(' · ') : 'Livraison estimée.';
+                    if (feedbackEl) {
+                        feedbackEl.textContent = data.client_address ? String(data.client_address) : '';
+                        feedbackEl.classList.remove('checkout-delivery-estimate--error');
+                    }
+                })
+                .catch(function () {
+                    // ici on arrive si le reseau lache : on remet le total sans livraison et on previent
+                    if (my !== seq) return;
+                    setLoading(false);
+                    feesEl.textContent = '—';
+                    feesEl.classList.remove('checkout-sum__value--free');
+                    if (totalEl) totalEl.textContent = formatEuro(panierTotal);
+                    updatePayAmount(panierTotal);
+                    if (hintEl) hintEl.textContent = 'Estimation indisponible.';
+                    if (feedbackEl) {
+                        feedbackEl.textContent = 'Réseau indisponible. Réessayez dans un instant.';
+                        feedbackEl.classList.add('checkout-delivery-estimate--error');
+                    }
+                });
+        }
+
+        // a chaque modif des champs adresse on relance l'estimation, avec le petit delai du debounce
+        const debounced = debounce(refreshEstimate, 550);
+        ['adresse', 'code_postal', 'ville'].forEach(function (id) {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener('input', debounced);
+        });
+
+        // case "ignorer la verification d'adresse" : on bascule entre forfait fixe et estimation Google
+        if (skipEl) {
+            skipEl.addEventListener('change', function () {
+                skipMode = skipEl.checked;
+                refreshEstimate();
+            });
+            // au cas ou le navigateur restaure la case cochee (retour arriere), on applique le forfait tout de suite
+            if (skipMode) applyFallback();
+        }
+    });
+  </script>
+  <script defer src="../js/menu-toggle.js"></script>
 </head>
 <body class="checkout-page">
   <div class="pcnavbar">
@@ -405,7 +643,10 @@ $BASE = preg_replace('#(/(?:Admin|Carte|Cuisinier|LOG|Livraison|Notation|Profil|
           <?php if ($est_connecte && ($role_actuel === "admin" || $role_actuel === "fakeadmin")): ?>
             <li><a href="<?= $BASE ?>/Admin/">Admin</a></li>
           <?php endif; ?>
-          <?php if ($est_connecte && ($role_actuel === "admin" || $role_actuel === "chef" || $role_actuel === "fakeadmin")): ?>
+          <?php if (
+              $est_connecte &&
+              ($role_actuel === "admin" || $role_actuel === "chef" || $role_actuel === "fakeadmin")
+          ): ?>
             <li><a href="<?= $BASE ?>/Cuisinier/">Cuisine</a></li>
           <?php endif; ?>
         </ul>
@@ -456,7 +697,7 @@ $BASE = preg_replace('#(/(?:Admin|Carte|Cuisinier|LOG|Livraison|Notation|Profil|
         <span class="mainMenuItemCollapsable">Cy Restaurant</span>
       </div>
 
-      <?php if (!($est_connecte)): ?>
+      <?php if (!$est_connecte): ?>
         <nav id="menuNav">
           <div class="mainMenuItemLogin">
             <a href="<?= $BASE ?>/LOG/login">
@@ -527,7 +768,10 @@ $BASE = preg_replace('#(/(?:Admin|Carte|Cuisinier|LOG|Livraison|Notation|Profil|
         <?php endif; ?>
 
 
-        <?php if ($est_connecte && ($role_actuel === "admin" || $role_actuel === "chef" || $role_actuel === "fakeadmin")): ?>
+        <?php if (
+            $est_connecte &&
+            ($role_actuel === "admin" || $role_actuel === "chef" || $role_actuel === "fakeadmin")
+        ): ?>
           <div class="mainMenuItemLogin">
             <a href="<?= $BASE ?>/Cuisinier/">
               <span class="mainMenuItemCollapsable">
@@ -563,23 +807,31 @@ $BASE = preg_replace('#(/(?:Admin|Carte|Cuisinier|LOG|Livraison|Notation|Profil|
             <div class="checkout-frame__inner">
                 <header class="checkout-frame__head">
                     <div class="checkout-frame__brand">CY Restaurant · Paiement</div>
-                    <h1><?php echo $bool_paiement_traite ? 'R&eacute;sultat' : 'Finaliser la commande'; ?></h1>
+                    <h1><?php echo $bool_paiement_traite ? "R&eacute;sultat" : "Finaliser la commande"; ?></h1>
                     <p><?php echo $bool_paiement_traite
-                        ? 'Votre transaction a &eacute;t&eacute; trait&eacute;e. Retrouvez le d&eacute;tail ci-dessous.'
-                        : 'V&eacute;rifiez votre panier, choisissez l&rsquo;horaire et le mode de r&egrave;glement.'; ?></p>
+                        ? "Votre transaction a &eacute;t&eacute; trait&eacute;e. Retrouvez le d&eacute;tail ci-dessous."
+                        : "V&eacute;rifiez votre panier, choisissez l&rsquo;horaire et le mode de r&egrave;glement."; ?></p>
                 </header>
 
                 <div class="checkout-frame__body">
         <?php
-        $show_error_alert = !empty($message) && !$bool_paiement_traite
-            && (strpos((string) $message, 'succès') === false && stripos((string) $message, 'déjà enregistrée') === false);
-        $show_success_alert = !empty($message) && !$bool_paiement_traite
-            && (strpos((string) $message, 'succès') !== false || stripos((string) $message, 'déjà enregistrée') !== false);
+        $show_error_alert =
+            !empty($message) &&
+            !$bool_paiement_traite &&
+            (strpos((string) $message, "succès") === false && stripos((string) $message, "déjà enregistrée") === false);
+        $show_success_alert =
+            !empty($message) &&
+            !$bool_paiement_traite &&
+            (strpos((string) $message, "succès") !== false || stripos((string) $message, "déjà enregistrée") !== false);
         ?>
         <?php if ($show_error_alert): ?>
-            <div class="checkout-alert checkout-alert--error" role="alert"><?php echo htmlspecialchars($message); ?></div>
+            <div class="checkout-alert checkout-alert--error" role="alert"><?php echo htmlspecialchars(
+                $message,
+            ); ?></div>
         <?php elseif ($show_success_alert): ?>
-            <div class="checkout-alert checkout-alert--success" role="status"><?php echo htmlspecialchars($message); ?></div>
+            <div class="checkout-alert checkout-alert--success" role="status"><?php echo htmlspecialchars(
+                $message,
+            ); ?></div>
         <?php endif; ?>
 
         <?php if (!$bool_paiement_traite): ?>
@@ -593,7 +845,10 @@ $BASE = preg_replace('#(/(?:Admin|Carte|Cuisinier|LOG|Livraison|Notation|Profil|
                 <div class="checkout-block__title">
                     <span>R&eacute;capitulatif</span>
                     <?php if (!empty($panier_items)): ?>
-                        <span class="checkout-badge"><?php echo (int) $panier_count; ?> article<?php echo $panier_count > 1 ? 's' : ''; ?></span>
+                        <span class="checkout-badge"><?php echo (int) $panier_count; ?> article<?php echo $panier_count >
+ 1
+     ? "s"
+     : ""; ?></span>
                     <?php endif; ?>
                 </div>
                 <div class="checkout-block__body">
@@ -607,17 +862,29 @@ $BASE = preg_replace('#(/(?:Admin|Carte|Cuisinier|LOG|Livraison|Notation|Profil|
                             <?php foreach ($panier_items as $item): ?>
                                 <li class="checkout-line">
                                     <div class="checkout-line__name">
-                                        <?php echo htmlspecialchars($item['name']); ?>
-                                        <div class="checkout-line__meta">Quantit&eacute; &times;<?php echo (int) $item['qty']; ?></div>
+                                        <?php echo htmlspecialchars($item["name"]); ?>
+                                        <div class="checkout-line__meta">Quantit&eacute; &times;<?php echo (int) $item[
+                                            "qty"
+                                        ]; ?></div>
                                     </div>
-                                    <div class="checkout-line__price"><?php echo number_format($item['subtotal'], 2, ',', ' '); ?> &euro;</div>
+                                    <div class="checkout-line__price"><?php echo number_format(
+                                        $item["subtotal"],
+                                        2,
+                                        ",",
+                                        " ",
+                                    ); ?> &euro;</div>
                                 </li>
                             <?php endforeach; ?>
                         </ul>
                         <div class="checkout-sum" aria-label="D&eacute;tail des montants">
                             <div class="checkout-sum__row">
                                 <span class="checkout-sum__label">Sous-total <span class="checkout-sum__sublabel">articles</span></span>
-                                <span class="checkout-sum__value"><?php echo number_format($panier_total, 2, ',', ' '); ?> &euro;</span>
+                                <span class="checkout-sum__value"><?php echo number_format(
+                                    $panier_total,
+                                    2,
+                                    ",",
+                                    " ",
+                                ); ?> &euro;</span>
                             </div>
                             <div class="checkout-sum__row checkout-sum__row--delivery">
                                 <span class="checkout-sum__label">
@@ -640,7 +907,12 @@ $BASE = preg_replace('#(/(?:Admin|Carte|Cuisinier|LOG|Livraison|Notation|Profil|
                             </div>
                             <div class="checkout-total">
                                 <span>Total &agrave; payer</span>
-                                <span id="checkout-sum-total"><?php echo number_format($total_a_payer_display, 2, ',', ' '); ?> &euro;</span>
+                                <span id="checkout-sum-total"><?php echo number_format(
+                                    $total_a_payer_display,
+                                    2,
+                                    ",",
+                                    " ",
+                                ); ?> &euro;</span>
                             </div>
                         </div>
                     <?php endif; ?>
@@ -648,7 +920,15 @@ $BASE = preg_replace('#(/(?:Admin|Carte|Cuisinier|LOG|Livraison|Notation|Profil|
             </div>
         </main>
 
-            <form class="checkout-form" method="POST" action="index.php" data-panier-total="<?php echo htmlspecialchars((string) $panier_total_display, ENT_QUOTES, 'UTF-8'); ?>" data-estimate-url="api_delivery_estimate.php">
+            <form class="checkout-form" method="POST" action="index.php" data-panier-total="<?php echo htmlspecialchars(
+                (string) $panier_total_display,
+                ENT_QUOTES,
+                "UTF-8",
+            ); ?>" data-estimate-url="api_delivery_estimate.php" data-fallback-fee="<?php echo htmlspecialchars(
+    (string) DELIVERY_PRICING["fallback_fee"],
+    ENT_QUOTES,
+    "UTF-8",
+); ?>">
                 <div class="checkout-section">
                     <div class="checkout-section__title">Horaire de livraison</div>
                     <div class="checkout-panel">
@@ -739,25 +1019,48 @@ $BASE = preg_replace('#(/(?:Admin|Carte|Cuisinier|LOG|Livraison|Notation|Profil|
                     </div>
                 </div>
 
+                <label class="checkout-cgv checkout-skip-delivery" for="skip_delivery_check">
+                    <input type="checkbox" name="skip_delivery_check" id="skip_delivery_check" value="1">
+                    <span>
+                        <strong>Ignorer la v&eacute;rification d&rsquo;adresse</strong> (calcul d&rsquo;itin&eacute;raire Google indisponible).
+                        Un forfait de livraison fixe de <?php echo number_format(
+                            (float) DELIVERY_PRICING["fallback_fee"],
+                            2,
+                            ",",
+                            " ",
+                        ); ?>&nbsp;&euro; sera appliqu&eacute;.
+                    </span>
+                </label>
+
                 <label class="checkout-cgv" for="cb_paiement">
                     <input type="checkbox" name="cb_paiement" id="cb_paiement" value="1" required>
                     <span>J&rsquo;accepte les conditions g&eacute;n&eacute;rales de vente</span>
                 </label>
 
-                <button type="submit" name="payer" value="1" class="btn-checkout" id="checkout_pay_btn" <?php echo empty($panier_items) ? 'disabled' : ''; ?>>
-                    Payer <span id="checkout_pay_amount"><?php echo empty($panier_items) ? '' : number_format($total_a_payer_display, 2, ',', ' ') . ' &euro;'; ?></span>
+                <button type="submit" name="payer" value="1" class="btn-checkout" id="checkout_pay_btn" <?php echo empty(
+                    $panier_items
+                )
+                    ? "disabled"
+                    : ""; ?>>
+                    Payer <span id="checkout_pay_amount"><?php echo empty($panier_items)
+                        ? ""
+                        : number_format($total_a_payer_display, 2, ",", " ") . " &euro;"; ?></span>
                 </button>
             </form>
         <?php else: ?>
             <div class="checkout-success-block">
-                <?php
-                $is_ok = isset($message) && (stripos((string) $message, 'Erreur') === false && stripos((string) $message, 'impossible') === false && stripos((string) $message, 'vide') === false);
-                ?>
-                <div class="checkout-alert <?php echo $is_ok ? 'checkout-alert--success' : 'checkout-alert--error'; ?>" role="<?php echo $is_ok ? 'status' : 'alert'; ?>">
-                    <?php echo htmlspecialchars($message ?? ''); ?>
+                <?php $is_ok =
+                    isset($message) &&
+                    (stripos((string) $message, "Erreur") === false &&
+                        stripos((string) $message, "impossible") === false &&
+                        stripos((string) $message, "vide") === false); ?>
+                <div class="checkout-alert <?php echo $is_ok
+                    ? "checkout-alert--success"
+                    : "checkout-alert--error"; ?>" role="<?php echo $is_ok ? "status" : "alert"; ?>">
+                    <?php echo htmlspecialchars($message ?? ""); ?>
                 </div>
                 <?php if ($is_ok): ?>
-                <?php $last_cid = isset($_SESSION['last_commande_id']) ? (int) $_SESSION['last_commande_id'] : 0; ?>
+                <?php $last_cid = isset($_SESSION["last_commande_id"]) ? (int) $_SESSION["last_commande_id"] : 0; ?>
                 <div class="checkout-waiting-game">
                     <p class="checkout-waiting-game__text">En attendant votre livraison, nous vous proposons notre jeu en ligne&nbsp;!</p>
                     <p class="checkout-waiting-game__text">Vous pouvez suivre votre commande en cliquant sur le bouton ci-dessous. Vous pourrez ajouter des articles à votre commande tant que la préparation de votre commande n'a pas commencé!</p>
@@ -781,166 +1084,6 @@ $BASE = preg_replace('#(/(?:Admin|Carte|Cuisinier|LOG|Livraison|Notation|Profil|
         </div>
     </div>
 
-    <script>
-        function toggleTime(show) {
-            var picker = document.getElementById('time_picker');
-            var input = document.getElementById('delivery_time');
-            if (!picker || !input) return;
-            picker.classList.toggle('is-visible', show);
-            picker.setAttribute('aria-hidden', show ? 'false' : 'true');
-            input.required = !!show;
-        }
-
-        (function () {
-            var feesEl = document.getElementById('checkout-sum-fees');
-            var form = document.querySelector('.checkout-form');
-            if (!feesEl || !form) return;
-
-            var estimateUrl = form.getAttribute('data-estimate-url') || 'api_delivery_estimate.php';
-            var panierTotal = parseFloat(String(form.getAttribute('data-panier-total') || '0').replace(',', '.'), 10);
-            if (isNaN(panierTotal)) panierTotal = 0;
-
-            var totalEl = document.getElementById('checkout-sum-total');
-            var hintEl = document.getElementById('checkout-delivery-hint');
-            var feedbackEl = document.getElementById('delivery_estimate_feedback');
-            var payAmountEl = document.getElementById('checkout_pay_amount');
-
-            function formatEuro(n) {
-                var x = Number(n);
-                if (isNaN(x)) x = 0;
-                return x.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' \u20ac';
-            }
-
-            function debounce(fn, ms) {
-                var t;
-                return function () {
-                    var ctx = this, args = arguments;
-                    clearTimeout(t);
-                    t = setTimeout(function () { fn.apply(ctx, args); }, ms);
-                };
-            }
-
-            function buildAddress() {
-                var a = document.getElementById('adresse');
-                var cp = document.getElementById('code_postal');
-                var v = document.getElementById('ville');
-                var line1 = a ? String(a.value || '').trim() : '';
-                var postal = cp ? String(cp.value || '').trim() : '';
-                var city = v ? String(v.value || '').trim() : '';
-                var parts = [];
-                if (line1) parts.push(line1);
-                var cityLine = (postal + ' ' + city).trim();
-                if (cityLine) parts.push(cityLine);
-                return parts.join(', ');
-            }
-
-            var seq = 0;
-
-            function setLoading(on) {
-                if (!feedbackEl) return;
-                if (on) {
-                    feedbackEl.textContent = 'Calcul de l\u2019itin\u00e9raire\u2026';
-                    feedbackEl.classList.add('checkout-delivery-estimate--loading');
-                } else {
-                    feedbackEl.classList.remove('checkout-delivery-estimate--loading');
-                }
-            }
-
-            function updatePayAmount(total) {
-                if (payAmountEl) payAmountEl.textContent = formatEuro(total);
-            }
-
-            function refreshEstimate() {
-                var addr = buildAddress();
-                if (addr.length < 8) {
-                    feesEl.textContent = '\u2014';
-                    feesEl.classList.remove('checkout-sum__value--free');
-                    if (totalEl) totalEl.textContent = formatEuro(panierTotal);
-                    updatePayAmount(panierTotal);
-                    if (hintEl) {
-                        hintEl.textContent = 'Saisissez rue, code postal et ville : estimation automatique (Google Maps).';
-                    }
-                    if (feedbackEl) {
-                        feedbackEl.textContent = '';
-                        feedbackEl.classList.remove('checkout-delivery-estimate--error');
-                    }
-                    return;
-                }
-                var my = ++seq;
-                setLoading(true);
-                if (feedbackEl) feedbackEl.classList.remove('checkout-delivery-estimate--error');
-
-                fetch(estimateUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-                    credentials: 'same-origin',
-                    body: JSON.stringify({ address: addr, order_total: panierTotal })
-                })
-                    .then(function (res) {
-                        return res.json().then(function (data) {
-                            return { httpOk: res.ok, data: data };
-                        });
-                    })
-                    .then(function (wrapped) {
-                        if (my !== seq) return;
-                        setLoading(false);
-                        var data = wrapped.data || {};
-                        if (!wrapped.httpOk || !data.ok) {
-                            feesEl.textContent = '\u2014';
-                            feesEl.classList.remove('checkout-sum__value--free');
-                            if (totalEl) totalEl.textContent = formatEuro(panierTotal);
-                            updatePayAmount(panierTotal);
-                            if (hintEl) hintEl.textContent = 'Estimation indisponible pour cette saisie.';
-                            if (feedbackEl) {
-                                feedbackEl.textContent = (data && data.error) ? String(data.error) : 'Erreur lors du calcul.';
-                                feedbackEl.classList.add('checkout-delivery-estimate--error');
-                            }
-                            return;
-                        }
-                        var cost = typeof data.cost === 'number' ? data.cost : parseFloat(String(data.cost || '0').replace(',', '.'));
-                        if (isNaN(cost)) cost = 0;
-                        var total = panierTotal + cost;
-                        if (data.free_delivery || cost <= 0.0001) {
-                            feesEl.textContent = 'Gratuit';
-                            feesEl.classList.add('checkout-sum__value--free');
-                        } else {
-                            feesEl.textContent = formatEuro(cost);
-                            feesEl.classList.remove('checkout-sum__value--free');
-                        }
-                        if (totalEl) totalEl.textContent = formatEuro(total);
-                        updatePayAmount(total);
-                        var bits = [];
-                        if (data.distance_text) bits.push(String(data.distance_text));
-                        if (data.duration_text) bits.push('\u2248 ' + String(data.duration_text));
-                        if (hintEl) hintEl.textContent = bits.length ? bits.join(' \u00b7 ') : 'Livraison estim\u00e9e.';
-                        if (feedbackEl) {
-                            feedbackEl.textContent = data.client_address ? String(data.client_address) : '';
-                            feedbackEl.classList.remove('checkout-delivery-estimate--error');
-                        }
-                    })
-                    .catch(function () {
-                        if (my !== seq) return;
-                        setLoading(false);
-                        feesEl.textContent = '\u2014';
-                        feesEl.classList.remove('checkout-sum__value--free');
-                        if (totalEl) totalEl.textContent = formatEuro(panierTotal);
-                        updatePayAmount(panierTotal);
-                        if (hintEl) hintEl.textContent = 'Estimation indisponible.';
-                        if (feedbackEl) {
-                            feedbackEl.textContent = 'R\u00e9seau indisponible. R\u00e9essayez dans un instant.';
-                            feedbackEl.classList.add('checkout-delivery-estimate--error');
-                        }
-                    });
-            }
-
-            var debounced = debounce(refreshEstimate, 550);
-            ['adresse', 'code_postal', 'ville'].forEach(function (id) {
-                var el = document.getElementById(id);
-                if (el) el.addEventListener('input', debounced);
-            });
-        })();
-    </script>
-    <script src="../js/menu-toggle.js"></script>
 
 </body>
 </html>

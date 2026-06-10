@@ -1,11 +1,11 @@
-.log  {
-    max-width: 400px;      /* largeur fixe sur grand ecran */
-    width: 90%;            /* largeur fluide sur petit ecran */
-    margin: 50px auto;     /* le auto centre horizontalement, 50px de marge en haut */
+.log {
+    max-width: 400px; /* largeur fixe sur grand ecran */
+    width: 90%; /* largeur fluide sur petit ecran */
+    margin: 50px auto; /* le auto centre horizontalement, 50px de marge en haut */
     padding: 24px;
     background-color: var(--bg-color);
     border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.5); /* petit effet d'ombre pour le relief */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5); /* petit effet d'ombre pour le relief */
     margin-bottom: 200px;
 }
 
@@ -19,8 +19,7 @@
     margin-bottom: 200px;
 }*/
 
-.g_id_signin
-{
+.g_id_signin {
     display: flex;
     justify-content: center;
 }
@@ -79,8 +78,7 @@
     border-radius: 4px;
 }
 
-.btn-small a
-{
+.btn-small a {
     text-decoration: none;
     color: #eef3f8;
 }

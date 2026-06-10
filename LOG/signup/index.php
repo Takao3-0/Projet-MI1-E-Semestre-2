@@ -1,19 +1,19 @@
-<?php require_once '../../../../protection.php'; ?>
+<?php require_once "../../../../protection.php"; ?>
 
-<?php require_once '../../../../../db_config.php';
+<?php
+require_once "../../../../../db_config.php";
 
 $message = "";
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    
+if ($_SERVER["REQUEST_METHOD"] === "POST") {
     // CAS 1 : Inscription Classique (Formulaire)
-    if (isset($_POST['username'], $_POST['password'], $_POST['email'])) {
-        $user = trim($_POST['username']);
-        $email = trim($_POST['email']);
-        $pass = $_POST['password'];
-        $conf = $_POST['confirmpassword'];
+    if (isset($_POST["username"], $_POST["password"], $_POST["email"])) {
+        $user = trim($_POST["username"]);
+        $email = trim($_POST["email"]);
+        $pass = $_POST["password"];
+        $conf = $_POST["confirmpassword"];
 
-        if ($user === '' || $email === '') {
+        if ($user === "" || $email === "") {
             $message = "Le nom d'utilisateur et l'adresse e-mail sont obligatoires.";
         } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $message = "Adresse e-mail invalide.";
@@ -44,16 +44,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // CAS 2 : Inscription/Connexion Google (Fetch)
-    if (isset($_POST['google_token'])) {
-        $token = $_POST['google_token'];
+    if (isset($_POST["google_token"])) {
+        $token = $_POST["google_token"];
         $url = "https://oauth2.googleapis.com/tokeninfo?id_token=" . $token;
         $response = file_get_contents($url);
         $data = json_decode($response, true);
 
-        if (isset($data['email'])) {
-            $email = $data['email'];
-            $name = $data['name'];
-            $google_id = $data['sub'];
+        if (isset($data["email"])) {
+            $email = $data["email"];
+            $name = $data["name"];
+            $google_id = $data["sub"];
 
             // On vérifie si l'utilisateur existe déjà
             $stmt = $pdo->prepare("SELECT * FROM users WHERE email = ?");
@@ -67,15 +67,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             // Ouverture de la session
-            $_SESSION['nom_utilisateur'] = $name;
-            $_SESSION['role'] = $user_exists ? $user_exists['role'] : 'etudiant';
-            $_SESSION['yumland'] = $user_exists ? (bool) $user_exists['yumland'] : false;
-            
+            cyj_session_login_reset();
+            $_SESSION["nom_utilisateur"] = $name;
+            $_SESSION["role"] = $user_exists ? $user_exists["role"] : "etudiant";
+            $_SESSION["yumland"] = $user_exists ? (bool) $user_exists["yumland"] : false;
+
             echo "success";
         } else {
             echo "error";
         }
-        exit; // On arrête le script pour ne pas envoyer le HTML en réponse au Fetch
+        exit(); // On arrête le script pour ne pas envoyer le HTML en réponse au Fetch
     }
 }
 ?>

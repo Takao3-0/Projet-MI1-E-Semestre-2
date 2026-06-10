@@ -1,91 +1,99 @@
-<?php  
+<?php
 
-$BASE = preg_replace('#(/(?:Admin|Carte|Cuisinier|LOG|Livraison|Notation|Profil|Sujet|CYBank)(?:/.*)?)?/[^/]*$#', '', $_SERVER['SCRIPT_NAME']);
-    require_once '../../../protection.php';
-    $pdo_users = $pdo;
-    require_once '../../../../db_config_yumland.php';
-    $pdo_commandes = $pdo;
+// chemin de base du site pour que les liens marchent partout
+$BASE = preg_replace(
+    '#(/(?:Admin|Carte|Cuisinier|LOG|Livraison|Notation|Profil|Sujet|CYBank)(?:/.*)?)?/[^/]*$#',
+    "",
+    $_SERVER["SCRIPT_NAME"],
+);
+// protection.php demarre la session et nous donne $est_connecte, $role_actuel et $pdo
+require_once "../../../protection.php";
+// base des comptes d'un cote, base des commandes (et des articles) de l'autre
+$pdo_users = $pdo;
+require_once "../../../../db_config_yumland.php";
+$pdo_commandes = $pdo;
 
-    function atributs_code_article($pdo_commandes, $category, $code_base_categorie) 
-    {
-        // 1. On cherche le code maximum existant pour cette catégorie précise
-        $stmt = $pdo_commandes->prepare("SELECT MAX(code) as max_code FROM articles WHERE categorie = ?");
-        $stmt->execute([$category]);
-        $resultat = $stmt->fetch();
-        
-        $code_actuel = $resultat['max_code'];
+// donne le prochain code libre pour une categorie (ex : les burgers commencent a 1000, les pizzas a 1100, etc.)
+function atributs_code_article($pdo_commandes, $category, $code_base_categorie)
+{
+    // on cherche le plus grand code deja utilise dans cette categorie
+    $stmt = $pdo_commandes->prepare("SELECT MAX(code) as max_code FROM articles WHERE categorie = ?");
+    $stmt->execute([$category]);
+    $resultat = $stmt->fetch();
 
-        // 2. SÉCURITÉ : Si la catégorie est totalement vide (aucun article)
-        // Exemple : si la base est 1400, le tout premier article sera 1401
-        if ($code_actuel === null) {
-            return $code_base_categorie + 1; 
-        }
+    $code_actuel = $resultat["max_code"];
 
-        // 3. LE SAUT : Si on a atteint la limite des 99 (ex: 1499)
-        if ($code_actuel == ($code_base_categorie + 99)) {
-            // On multiplie la base par 10 (ex: 1400 devient 14000)
-            $code_actuel = ($code_base_categorie * 10);
-        }
-
-        // 4. On retourne le code suivant
-        // Cas normal : 1403 -> 1404
-        // Cas du saut : 14000 -> 14001
-        return $code_actuel + 1;
+    // si la categorie est encore vide, on commence juste au dessus de la base (base 1400 -> 1401)
+    if ($code_actuel === null) {
+        return $code_base_categorie + 1;
     }
-    
-    if ($role_actuel === "admin" || $role_actuel === "fakeadmin") {
-        $stmt = $pdo_commandes->prepare("SELECT * FROM articles");
-        $stmt->execute();
-        $articles = $stmt->fetchAll();
 
-        if(isset($_POST['category'], $_POST['name'], $_POST['description'], $_POST['prix'])) {
-            $category = $_POST['category'];
-            $nom = $_POST['name'];
-            $description = $_POST['description'];
-            $prix = $_POST['prix'];
+    // si on est arrive au 99eme code (ex : 1499), on passe a une base plus grande (1400 -> 14000)
+    if ($code_actuel == $code_base_categorie + 99) {
+        $code_actuel = $code_base_categorie * 10;
+    }
 
-            if($prix <= 0)
-                $message = "Le prix doit être supérieur à 0";
-            else {
-                switch($category) 
-                {
-                    case "Burger":
-                        $type_post = "burger";
-                        $code = atributs_code_article($pdo_commandes, $category, 1000);
-                        break;
-                    case "Pizza":
-                        $type_post = "pizza";
-                        $code = atributs_code_article($pdo_commandes, $category, 1100);
-                        break;
-                    case "Wrap":
-                    case "Tacos":
-                        $type_post = "wrap";
-                        $code = atributs_code_article($pdo_commandes, $category, 1200);
-                        break;
-                    case "Accompagnement":
-                        $type_post = "side";
-                        $code = atributs_code_article($pdo_commandes, $category, 1300);
-                        break;
-                    case "Dessert":
-                        $type_post = "dessert";
-                        $code = atributs_code_article($pdo_commandes, $category, 1400);
-                        break;
-                    case "Boisson":
-                        $type_post = "boisson";
-                        $code = atributs_code_article($pdo_commandes, $category, 1500);
-                        break;
-                    default:
-                        $message = "Catégorie invalide";
-                        header("Location: ../index.php");
-                        exit;
-                        
-                }
-                $stmt = $pdo_commandes->prepare("INSERT INTO articles (code, nom, prix, categorie, type_post, description) VALUES (?, ?, ?, ?, ?, ?)");
-                $stmt->execute([$code, $nom, $prix, $category, $type_post, $description]);
+    // sinon on prend simplement le code suivant
+    return $code_actuel + 1;
+}
+
+// seuls les admins peuvent ajouter un article : controle cote serveur, pas seulement dans l'affichage
+if ($role_actuel === "admin" || $role_actuel === "fakeadmin") {
+    // on charge les articles existants pour les afficher dans la liste plus bas
+    $stmt = $pdo_commandes->prepare("SELECT * FROM articles");
+    $stmt->execute();
+    $articles = $stmt->fetchAll();
+
+    // si le formulaire d'ajout a ete envoye (les 4 champs sont presents)
+    if (isset($_POST["category"], $_POST["name"], $_POST["description"], $_POST["prix"])) {
+        $category = $_POST["category"];
+        $nom = $_POST["name"];
+        $description = $_POST["description"];
+        $prix = $_POST["prix"];
+
+        if ($prix <= 0) {
+            $message = "Le prix doit être supérieur à 0";
+        } else {
+            // selon la categorie on choisit le type et la base de code, puis on calcule le code suivant
+            switch ($category) {
+                case "Burger":
+                    $type_post = "burger";
+                    $code = atributs_code_article($pdo_commandes, $category, 1000);
+                    break;
+                case "Pizza":
+                    $type_post = "pizza";
+                    $code = atributs_code_article($pdo_commandes, $category, 1100);
+                    break;
+                case "Wrap":
+                case "Tacos":
+                    $type_post = "wrap";
+                    $code = atributs_code_article($pdo_commandes, $category, 1200);
+                    break;
+                case "Accompagnement":
+                    $type_post = "side";
+                    $code = atributs_code_article($pdo_commandes, $category, 1300);
+                    break;
+                case "Dessert":
+                    $type_post = "dessert";
+                    $code = atributs_code_article($pdo_commandes, $category, 1400);
+                    break;
+                case "Boisson":
+                    $type_post = "boisson";
+                    $code = atributs_code_article($pdo_commandes, $category, 1500);
+                    break;
+                default:
+                    $message = "Catégorie invalide";
+                    header("Location: ../index.php");
+                    exit();
             }
+            // on enregistre le nouvel article en base (requete preparee, pas d'injection possible)
+            $stmt = $pdo_commandes->prepare(
+                "INSERT INTO articles (code, nom, prix, categorie, type_post, description) VALUES (?, ?, ?, ?, ?, ?)",
+            );
+            $stmt->execute([$code, $nom, $prix, $category, $type_post, $description]);
         }
-
     }
+}
 ?>
 
 <!DOCTYPE html>
@@ -98,33 +106,34 @@ $BASE = preg_replace('#(/(?:Admin|Carte|Cuisinier|LOG|Livraison|Notation|Profil|
     <link rel="stylesheet" href="../index.css">
     <link rel="stylesheet" href="admin.css">
     <style>
-    /*Pour afficher soit l'un soit l'autre*/
+        /*Pour afficher soit l'un soit l'autre*/
 
-    /*Pour la position sticky on là met ici et pas dans .navbar sinon bah ça s'applique pas vu que pcnavbar et mobilenavbar son parents de la classe nav */
-    .pcnavbar {
-      display: block;
-      position: sticky;
-      top: 0;
-      z-index: 100;
-    }
+        /*Pour la position sticky on là met ici et pas dans .navbar sinon bah ça s'applique pas vu que pcnavbar et mobilenavbar son parents de la classe nav */
+        .pcnavbar {
+            display: block;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
 
-    .mobilenavbar {  
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      display: none;
-    }
+        .mobilenavbar {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            display: none;
+        }
 
-    @media (max-width: 900px) {
-      .pcnavbar {
-        display: none;
-      }
+        @media (max-width: 900px) {
+            .pcnavbar {
+                display: none;
+            }
 
-      .mobilenavbar {
-        display: block;
-      }
-    }
-  </style>
+            .mobilenavbar {
+                display: block;
+            }
+        }
+    </style>
+    <script defer src="../js/menu-toggle.js"></script>
 </head>
 <body>
     <div class="pcnavbar">
@@ -147,7 +156,10 @@ $BASE = preg_replace('#(/(?:Admin|Carte|Cuisinier|LOG|Livraison|Notation|Profil|
             <?php if ($est_connecte && ($role_actuel === "admin" || $role_actuel === "fakeadmin")): ?>
                 <li><a href="<?= $BASE ?>/Admin/">Admin</a></li>
             <?php endif; ?>
-            <?php if ($est_connecte && ($role_actuel === "admin" || $role_actuel === "chef" || $role_actuel === "fakeadmin")): ?>
+            <?php if (
+                $est_connecte &&
+                ($role_actuel === "admin" || $role_actuel === "chef" || $role_actuel === "fakeadmin")
+            ): ?>
                 <li><a href="<?= $BASE ?>/Cuisinier/">Cuisine</a></li>
             <?php endif; ?>
             </ul>
@@ -198,7 +210,7 @@ $BASE = preg_replace('#(/(?:Admin|Carte|Cuisinier|LOG|Livraison|Notation|Profil|
             <span class="mainMenuItemCollapsable">Cy Restaurant</span>
         </div>
 
-        <?php if (!($est_connecte)): ?>
+        <?php if (!$est_connecte): ?>
             <nav id="menuNav">
             <div class="mainMenuItemLogin">
                 <a href="<?= $BASE ?>/LOG/login">
@@ -269,7 +281,10 @@ $BASE = preg_replace('#(/(?:Admin|Carte|Cuisinier|LOG|Livraison|Notation|Profil|
             <?php endif; ?>
 
 
-            <?php if ($est_connecte && ($role_actuel === "admin" || $role_actuel === "chef" || $role_actuel === "fakeadmin")): ?>
+            <?php if (
+                $est_connecte &&
+                ($role_actuel === "admin" || $role_actuel === "chef" || $role_actuel === "fakeadmin")
+            ): ?>
             <div class="mainMenuItemLogin">
                 <a href="<?= $BASE ?>/Cuisinier/">
                 <span class="mainMenuItemCollapsable">
@@ -336,7 +351,5 @@ $BASE = preg_replace('#(/(?:Admin|Carte|Cuisinier|LOG|Livraison|Notation|Profil|
             <button type="submit" class="submit">Enregistrer l'article</button>
         </form>
     </div>
-    <script src="../js/menu-toggle.js"></script>
-    
 </body>
 </html>

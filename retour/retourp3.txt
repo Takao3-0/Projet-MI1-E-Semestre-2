@@ -1,0 +1,48 @@
+========================================================================
+RETOUR PHASE 3 — Projet CYJ (CY Restaurant / Creative Yumland)
+========================================================================
+Fichier de référence à consulter avant toute modification de code en
+Phase 4. Ces 3 points sont les corrections explicitement demandées par
+le correcteur à l'issue de la Phase 3.
+
+------------------------------------------------------------------------
+1. CODE : Pas de <script> en dehors de la balise <head>
+------------------------------------------------------------------------
+   - Tout le JavaScript doit être placé dans <head> (idéalement avec
+     l'attribut `defer`), ou externalisé dans un fichier .js chargé
+     depuis <head>.
+   - INTERDIT : balises <script> en plein milieu ou en fin de <body>.
+
+   ÉTAT ACTUEL dans /Profil (à corriger) :
+     * Profil/index.php   -> <script> en fin de <body> (lignes ~245-296)
+     * Profil/Detail.php  -> <script> en fin de <body> (lignes ~681-928)
+
+------------------------------------------------------------------------
+2. CODE : Ne pas utiliser `var` pour déclarer les variables JS
+------------------------------------------------------------------------
+   - Utiliser `const` (par défaut) ou `let`.
+   - `var` toléré seulement avec une bonne justification documentée.
+
+   ÉTAT ACTUEL dans /Profil (à corriger) :
+     * Profil/Detail.php  -> tout le bloc JS utilise `var` (à passer en
+                             const/let).
+     * Profil/index.php   -> déjà en `const` (OK, rien à faire).
+
+------------------------------------------------------------------------
+3. CODE : Les produits doivent être chargés depuis la base de données
+------------------------------------------------------------------------
+   - Reproche initial : la page d'accueil (index.php à la racine du site)
+     contenait tout le catalogue produits "en dur" dans le HTML.
+   - Les produits doivent provenir d'une source de données, pas être
+     codés en dur dans le HTML.
+
+   ÉTAT ACTUEL côté /Profil :
+     * L'ajout d'article dans Profil/Detail.php charge le catalogue depuis
+       data/items.json (fichier), PAS depuis du HTML en dur -> conforme à
+       l'esprit du retour. À vérifier si le correcteur exige une vraie
+       table SQL plutôt qu'un JSON.
+
+========================================================================
+PROCÉDURE : consulter ce fichier avant chaque correction Phase 4 et
+cocher au fur et à mesure.
+========================================================================
